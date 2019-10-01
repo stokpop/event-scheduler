@@ -1,7 +1,7 @@
 package nl.stokpop.eventscheduler.event;
 
 import nl.stokpop.eventscheduler.api.TestContext;
-import nl.stokpop.eventscheduler.event.generator.EventGeneratorProperties;
+import nl.stokpop.eventscheduler.generator.EventGeneratorProperties;
 
 import java.util.List;
 

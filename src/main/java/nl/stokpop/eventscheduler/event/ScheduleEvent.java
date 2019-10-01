@@ -1,6 +1,6 @@
 package nl.stokpop.eventscheduler.event;
 
-import nl.stokpop.eventscheduler.exception.PerfanaClientRuntimeException;
+import nl.stokpop.eventscheduler.exception.EventSchedulerRuntimeException;
 
 import java.time.Duration;
 import java.util.Arrays;
@@ -125,7 +125,7 @@ public class ScheduleEvent {
         }
         int indexOpen = nameWithDescription.indexOf("(");
         int indexClose = nameWithDescription.lastIndexOf(")");
-        if (indexClose == -1) { throw new PerfanaClientRuntimeException("closing parentheses ')' is missing in '" + nameWithDescription + "'"); }
+        if (indexClose == -1) { throw new EventSchedulerRuntimeException("closing parentheses ')' is missing in '" + nameWithDescription + "'"); }
 
         String name = nameWithDescription.substring(0, indexOpen).trim();
         String description = nameWithDescription.substring(indexOpen + 1, indexClose).trim();

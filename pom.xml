@@ -5,13 +5,13 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>nl.stokpop</groupId>
-    <artifactId>event-generator</artifactId>
+    <artifactId>event-scheduler</artifactId>
     <version>1.0.0</version>
-    <description>Java generic event generator to be used during long running processes such as load tests.
+    <description>Java generic event scheduler to be used during long running processes such as load tests.
 	Specific event implementations can be registered via the classpath.</description>
     <packaging>jar</packaging>
 
-    <name>event-generator</name>
+    <name>event-scheduler</name>
     <url>https://stokpop.nl</url>
 
     <properties>
@@ -37,9 +37,9 @@
     </developers>
 
     <scm>
-        <connection>scm:git:git:@github.com:stokpop/event-generator.git</connection>
-        <developerConnection>scm:git:git:@github.com:stokpop/event-generator.git</developerConnection>
-        <url>https://github.com/stokpop/event-generator</url>
+        <connection>scm:git:git:@github.com:stokpop/event-scheduler.git</connection>
+        <developerConnection>scm:git:git:@github.com:stokpop/event-scheduler.git</developerConnection>
+        <url>https://github.com/stokpop/event-scheduler</url>
         <tag>HEAD</tag>
     </scm>
 
@@ -58,75 +58,12 @@
         </license>
     </licenses>
 
-
-    <dependencyManagement>
-        <dependencies>
-            <dependency>
-                <groupId>org.apache.commons</groupId>
-                <artifactId>commons-exec</artifactId>
-                <version>${commons-exec.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.maven</groupId>
-                <artifactId>maven-plugin-api</artifactId>
-                <version>${maven3.version}</version>
-                <scope>provided</scope>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.maven.plugin-tools</groupId>
-                <artifactId>maven-plugin-annotations</artifactId>
-                <version>${maven3.version}</version>
-                <scope>provided</scope>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.maven</groupId>
-                <artifactId>maven-compat</artifactId>
-                <version>${maven3.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.codehaus.plexus</groupId>
-                <artifactId>plexus-utils</artifactId>
-                <version>${plexus-utils.version}</version>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
-
     <dependencies>
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
             <version>4.11</version>
             <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-exec</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.maven</groupId>
-            <artifactId>maven-plugin-api</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.maven.plugin-tools</groupId>
-            <artifactId>maven-plugin-annotations</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.codehaus.plexus</groupId>
-            <artifactId>plexus-utils</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.maven</groupId>
-            <artifactId>maven-compat</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.squareup.okhttp3</groupId>
-            <artifactId>okhttp</artifactId>
-            <version>3.8.1</version>
-        </dependency>
-        <dependency>
-            <groupId>com.jayway.jsonpath</groupId>
-            <artifactId>json-path</artifactId>
-            <version>2.4.0</version>
         </dependency>
     </dependencies>
 
@@ -152,7 +89,6 @@
                             <exclude>**/LICENSE</exclude>
                             <exclude>**/*.md</exclude>
                             <exclude>.gitignore</exclude>
-                            <exclude>make_credentials.py</exclude>
                         </excludes>
                     </configuration>
                     <executions>

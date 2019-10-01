@@ -3,7 +3,7 @@ package nl.stokpop.eventscheduler.api;
 /**
  * Logs to standard out for convenience. Add your own logger preferably where possible.
  */
-public class PerfanaClientLoggerStdOut implements PerfanaClientLogger {
+public class EventSchedulerLoggerStdOut implements EventSchedulerLogger {
 
         @Override
         public void info(final String message) {

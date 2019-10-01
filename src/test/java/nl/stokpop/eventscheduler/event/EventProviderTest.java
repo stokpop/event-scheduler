@@ -1,6 +1,6 @@
 package nl.stokpop.eventscheduler.event;
 
-import nl.stokpop.eventscheduler.api.PerfanaClientLoggerStdOut;
+import nl.stokpop.eventscheduler.api.EventSchedulerLoggerStdOut;
 import nl.stokpop.eventscheduler.api.TestContext;
 import nl.stokpop.eventscheduler.api.TestContextBuilder;
 import org.junit.Test;
@@ -29,7 +29,7 @@ public class EventProviderTest {
         // this should succeed
         events.add(new MyTestEventThatCanFail(counter, 1, 2));
 
-        EventProvider provider = new EventProvider(events, new PerfanaClientLoggerStdOut());
+        EventProvider provider = new EventProvider(events, new EventSchedulerLoggerStdOut());
 
         provider.broadcastCustomEvent(new TestContextBuilder().build(), new EventSchedulerProperties(), ScheduleEvent.createFromLine("PT1M|test-event"));
 

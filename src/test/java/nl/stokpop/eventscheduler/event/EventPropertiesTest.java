@@ -13,7 +13,7 @@ public class EventPropertiesTest {
 
         String name = "my-name";
         String value = "my-value";
-        properties.put("io.perfana.event.PerfanaEventPropertiesTest.MyPerfanaEvent", name, value);
+        properties.put("nl.stokpop.eventscheduler.event.EventPropertiesTest.MyEvent", name, value);
 
         assertEquals(value, properties.get(new MyEvent()).getProperty(name));
     }
@@ -21,7 +21,7 @@ public class EventPropertiesTest {
     private static final class MyEvent extends EventAdapter {
         @Override
         public String getName() {
-            return "MyPerfanaEvent";
+            return "MyCustomEvent";
         }
         // no further implementation needed for this test
     }
@@ -29,7 +29,6 @@ public class EventPropertiesTest {
     @Test
     public void nonExistingProperties() {
         EventSchedulerProperties properties = new EventSchedulerProperties();
-
         assertTrue(properties.get(new MyEvent()).isEmpty());
     }
 

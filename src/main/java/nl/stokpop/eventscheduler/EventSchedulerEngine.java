@@ -1,13 +1,12 @@
 package nl.stokpop.eventscheduler;
 
-import nl.stokpop.eventscheduler.api.PerfanaCaller;
-import nl.stokpop.eventscheduler.api.PerfanaClientLogger;
-import nl.stokpop.eventscheduler.api.PerfanaConnectionSettings;
+import nl.stokpop.eventscheduler.api.EventSchedulerLogger;
+import nl.stokpop.eventscheduler.api.EventSchedulerSettings;
 import nl.stokpop.eventscheduler.api.TestContext;
-import nl.stokpop.eventscheduler.exception.PerfanaClientRuntimeException;
 import nl.stokpop.eventscheduler.event.EventBroadcaster;
 import nl.stokpop.eventscheduler.event.EventSchedulerProperties;
 import nl.stokpop.eventscheduler.event.ScheduleEvent;
+import nl.stokpop.eventscheduler.exception.EventSchedulerRuntimeException;
 
 import java.util.List;
 import java.util.concurrent.Executors;
@@ -18,54 +17,51 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 class EventSchedulerEngine {
 
-    private final PerfanaClientLogger logger;
+    private final EventSchedulerLogger logger;
 
     private ScheduledExecutorService executorKeepAlive;
     private ScheduledExecutorService executorCustomEvents;
 
-    EventSchedulerEngine(PerfanaClientLogger logger) {
+    EventSchedulerEngine(EventSchedulerLogger logger) {
         if (logger == null) {
-            throw new PerfanaClientRuntimeException("logger is null");
+            throw new EventSchedulerRuntimeException("logger is null");
         }
         this.logger = logger;
     }
 
-    void startKeepAliveThread(PerfanaCaller perfana, TestContext context, PerfanaConnectionSettings settings, EventBroadcaster broadcaster, EventSchedulerProperties eventProperties) {
-        nullChecks(perfana, context, broadcaster, eventProperties);
+    void startKeepAliveThread(TestContext context, EventSchedulerSettings settings, EventBroadcaster broadcaster, EventSchedulerProperties eventProperties) {
+        nullChecks(context, broadcaster, eventProperties);
 
         if (executorKeepAlive != null) {
             throw new RuntimeException("cannot start keep alive thread multiple times!");
         }
 
-        logger.info(String.format("calling Perfana (%s) keep alive every %s", settings.getPerfanaUrl(), settings.getKeepAliveDuration()));
+        logger.info(String.format("calling keep alive every %s", settings.getKeepAliveDuration()));
 
         executorKeepAlive = createKeepAliveScheduler();
         
-        KeepAliveRunner keepAliveRunner = new KeepAliveRunner(perfana, context, broadcaster, eventProperties);
+        KeepAliveRunner keepAliveRunner = new KeepAliveRunner(context, broadcaster, eventProperties);
         executorKeepAlive.scheduleAtFixedRate(keepAliveRunner, 0, settings.getKeepAliveDuration().getSeconds(), TimeUnit.SECONDS);
     }
 
-    private void nullChecks(PerfanaCaller perfana, TestContext context, EventBroadcaster broadcaster, EventSchedulerProperties eventProperties) {
-        if (perfana == null) {
-            throw new NullPointerException("PerfanaCaller cannot be null");
-        }
+    private void nullChecks(TestContext context, EventBroadcaster broadcaster, EventSchedulerProperties eventProperties) {
         if (context == null) {
             throw new NullPointerException("TestContext cannot be null");
         }
         if (broadcaster == null) {
-            throw new NullPointerException("PerfanaEventBroadcaster cannot be null");
+            throw new NullPointerException("EventBroadcaster cannot be null");
         }
         if (eventProperties == null) {
-            throw new NullPointerException("PerfanaEventProperties cannot be null");
+            throw new NullPointerException("EventSchedulerProperties cannot be null");
         }
     }
 
-    private void addToExecutor(ScheduledExecutorService executorService, TestContext context, ScheduleEvent event, EventSchedulerProperties eventProperties, PerfanaCaller perfana, EventBroadcaster broadcaster) {
-        executorService.schedule(new EventRunner(context, eventProperties, event, broadcaster, perfana), event.getDuration().getSeconds(), TimeUnit.SECONDS);
+    private void addToExecutor(ScheduledExecutorService executorService, TestContext context, ScheduleEvent event, EventSchedulerProperties eventProperties, EventBroadcaster broadcaster) {
+        executorService.schedule(new EventRunner(context, eventProperties, event, broadcaster), event.getDuration().getSeconds(), TimeUnit.SECONDS);
     }
 
     void shutdownThreadsNow() {
-        logger.info("shutdown Perfana Executor threads");
+        logger.info("shutdown Executor threads");
         if (executorKeepAlive != null) {
             executorKeepAlive.shutdownNow();
         }
@@ -73,10 +69,10 @@ class EventSchedulerEngine {
             List<Runnable> runnables = executorCustomEvents.shutdownNow();
             if (runnables.size() > 0) {
                 if (runnables.size() == 1) {
-                    logger.warn("there is 1 custom Perfana event that is not (fully) executed!");
+                    logger.warn("there is 1 custom event that is not (fully) executed!");
                 }
                 else {
-                    logger.warn("there are " + runnables.size() + " custom Perfana events that are not (fully) executed!");
+                    logger.warn("there are " + runnables.size() + " custom events that are not (fully) executed!");
                 }
             }
         }
@@ -84,15 +80,15 @@ class EventSchedulerEngine {
         executorCustomEvents = null;
     }
 
-    void startCustomEventScheduler(PerfanaCaller perfana, TestContext context, List<ScheduleEvent> scheduleEvents, EventBroadcaster broadcaster, EventSchedulerProperties eventProperties) {
-        nullChecks(perfana, context, broadcaster, eventProperties);
+    void startCustomEventScheduler(TestContext context, List<ScheduleEvent> scheduleEvents, EventBroadcaster broadcaster, EventSchedulerProperties eventProperties) {
+        nullChecks(context, broadcaster, eventProperties);
 
         if (!(scheduleEvents == null || scheduleEvents.isEmpty())) {
 
             logger.info(createEventScheduleMessage(scheduleEvents));
 
             executorCustomEvents = createCustomEventScheduler();
-            scheduleEvents.forEach(event -> addToExecutor(executorCustomEvents, context, event, eventProperties, perfana, broadcaster));
+            scheduleEvents.forEach(event -> addToExecutor(executorCustomEvents, context, event, eventProperties, broadcaster));
         }
         else {
             logger.info("no custom Perfana schedule events found");
@@ -130,13 +126,11 @@ class EventSchedulerEngine {
     
     class KeepAliveRunner implements Runnable {
 
-        private final PerfanaCaller perfana;
         private final TestContext context;
         private final EventBroadcaster broadcaster;
         private final EventSchedulerProperties eventProperties;
 
-        KeepAliveRunner(PerfanaCaller perfana, TestContext context, EventBroadcaster broadcaster, EventSchedulerProperties eventProperties) {
-            this.perfana = perfana;
+        KeepAliveRunner(TestContext context, EventBroadcaster broadcaster, EventSchedulerProperties eventProperties) {
             this.context = context;
             this.broadcaster = broadcaster;
             this.eventProperties = eventProperties;
@@ -144,15 +138,11 @@ class EventSchedulerEngine {
 
         @Override
         public void run() {
-            try {
-                perfana.callPerfanaTestEndpoint(context, false);
-            } catch (Exception e) {
-                logger.error("Perfana call for keep-alive failed", e);
-            }
+            // TODO make recurring calls also part of the generic EventGenerators
             try {
                 broadcaster.broadCastKeepAlive(context, eventProperties);
             } catch (Exception e) {
-                logger.error("Perfana broadcast keep-alive failed", e);
+                logger.error("Broadcast keep-alive failed", e);
             }
 
         }
@@ -171,27 +161,20 @@ class EventSchedulerEngine {
         private final EventSchedulerProperties eventProperties;
 
         private final EventBroadcaster eventBroadcaster;
-        private final PerfanaCaller perfana;
 
-        public EventRunner(TestContext context, EventSchedulerProperties eventProperties, ScheduleEvent event, EventBroadcaster eventBroadcaster, PerfanaCaller perfana) {
+        public EventRunner(TestContext context, EventSchedulerProperties eventProperties, ScheduleEvent event, EventBroadcaster eventBroadcaster) {
             this.event = event;
             this.context = context;
             this.eventProperties = eventProperties;
             this.eventBroadcaster = eventBroadcaster;
-            this.perfana = perfana;
         }
 
         @Override
         public void run() {
             try {
-                perfana.callPerfanaEvent(context, event.getDescription());
-            } catch (Exception e) {
-                logger.error("Perfana call event failed", e);
-            }
-            try {
                 eventBroadcaster.broadcastCustomEvent(context, eventProperties, event);
             } catch (Exception e) {
-                logger.error("Perfana broadcast event failed", e);
+                logger.error("Broadcast custom event failed", e);
             }
         }
 

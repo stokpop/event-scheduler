@@ -1,4 +1,4 @@
-package nl.stokpop.eventscheduler.event.generator;
+package nl.stokpop.eventscheduler.generator;
 
 import nl.stokpop.eventscheduler.api.TestContext;
 import nl.stokpop.eventscheduler.event.EventGenerator;

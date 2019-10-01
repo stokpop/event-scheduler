@@ -1,6 +1,6 @@
 package nl.stokpop.eventscheduler.api;
 
-public interface PerfanaClientLogger {
+public interface EventSchedulerLogger {
 
     void info(String message);
     void warn(String message);

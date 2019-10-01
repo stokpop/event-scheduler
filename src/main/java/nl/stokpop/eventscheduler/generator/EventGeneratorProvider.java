@@ -1,6 +1,6 @@
-package nl.stokpop.eventscheduler.event.generator;
+package nl.stokpop.eventscheduler.generator;
 
-import nl.stokpop.eventscheduler.api.PerfanaClientLogger;
+import nl.stokpop.eventscheduler.api.EventSchedulerLogger;
 import nl.stokpop.eventscheduler.event.EventGenerator;
 
 import java.util.Collections;
@@ -11,18 +11,18 @@ import java.util.ServiceLoader;
 public class EventGeneratorProvider {
 
     private Map<String, EventGenerator> generators;
-    private PerfanaClientLogger logger;
+    private EventSchedulerLogger logger;
 
-    EventGeneratorProvider(Map<String, EventGenerator> generators, PerfanaClientLogger logger) {
+    EventGeneratorProvider(Map<String, EventGenerator> generators, EventSchedulerLogger logger) {
         this.generators = Collections.unmodifiableMap(new HashMap<>(generators));
         this.logger = logger;
     }
 
-    public static EventGeneratorProvider createInstanceFromClasspath(PerfanaClientLogger logger) {
+    public static EventGeneratorProvider createInstanceFromClasspath(EventSchedulerLogger logger) {
         return createInstanceFromClasspath(logger, null);
     }
 
-    public static EventGeneratorProvider createInstanceFromClasspath(PerfanaClientLogger logger, ClassLoader classLoader) {
+    public static EventGeneratorProvider createInstanceFromClasspath(EventSchedulerLogger logger, ClassLoader classLoader) {
         ServiceLoader<EventGenerator> generatorLoader = classLoader == null
                 ? ServiceLoader.load(EventGenerator.class)
                 : ServiceLoader.load(EventGenerator.class, classLoader);

@@ -1,14 +1,13 @@
 package nl.stokpop.eventscheduler;
 
-import nl.stokpop.eventscheduler.api.PerfanaCaller;
-import nl.stokpop.eventscheduler.api.PerfanaClientLoggerStdOut;
+import nl.stokpop.eventscheduler.api.EventSchedulerLoggerStdOut;
 import nl.stokpop.eventscheduler.api.TestContext;
 import nl.stokpop.eventscheduler.api.TestContextBuilder;
-import nl.stokpop.eventscheduler.exception.PerfanaClientRuntimeException;
 import nl.stokpop.eventscheduler.event.EventBroadcaster;
 import nl.stokpop.eventscheduler.event.EventSchedulerProperties;
 import nl.stokpop.eventscheduler.event.ScheduleEvent;
-import nl.stokpop.eventscheduler.event.generator.EventGeneratorDefault;
+import nl.stokpop.eventscheduler.generator.EventGeneratorDefault;
+import nl.stokpop.eventscheduler.exception.EventSchedulerRuntimeException;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -47,28 +46,11 @@ public class EventSchedulerEngineTest {
         events.add(ScheduleEvent.createFromLine("PT0.4S|my-event(phase 4)"));
         events.add(ScheduleEvent.createFromLine("PT0.5S|my-event(phase 5)"));
 
-        EventSchedulerEngine engine = new EventSchedulerEngine(new PerfanaClientLoggerStdOut());
+        EventSchedulerEngine engine = new EventSchedulerEngine(new EventSchedulerLoggerStdOut());
 
         TestContext context = new TestContextBuilder().build();
 
-        final AtomicInteger callerCount = new AtomicInteger(0);
         final AtomicInteger broadcastCount = new AtomicInteger(0);
-
-        PerfanaCaller caller = new PerfanaCaller() {
-            @Override
-            public void callPerfanaEvent(TestContext context, String eventDescription) {
-                System.out.println("call perfana event: " + eventDescription);
-                callerCount.incrementAndGet();
-                if (callerCount.intValue() < 3) {
-                    throw new PerfanaClientRuntimeException("help! callPerfanaEvent: " + eventDescription);
-                }
-            }
-
-            @Override
-            public void callPerfanaTestEndpoint(TestContext context, boolean complete) {
-                System.out.println("call perfana test endpoint");
-            }
-        };
 
         EventBroadcaster broadcaster = new EventBroadcaster() {
             @Override
@@ -87,23 +69,32 @@ public class EventSchedulerEngineTest {
             }
 
             @Override
+            public void broadcastAbortTest(TestContext context, EventSchedulerProperties eventProperties) {
+                System.out.println("broadcast: abort test");
+            }
+
+            @Override
             public void broadcastCustomEvent(TestContext context, EventSchedulerProperties eventProperties, ScheduleEvent event) {
                 System.out.println("broadcast: custom event: " + event);
                 broadcastCount.incrementAndGet();
                 if (broadcastCount.intValue() < 3) {
-                    throw new PerfanaClientRuntimeException("help! broadcastCustomEvent: " + event) ;
+                    throw new EventSchedulerRuntimeException("help! broadcastCustomEvent: " + event) ;
                 }
+            }
+
+            @Override
+            public void broadcastCheckResults(TestContext context, EventSchedulerProperties eventProperties) {
+                System.out.println("broadcast: check results");
             }
         };
 
-        engine.startCustomEventScheduler(caller, context, events, broadcaster, new EventSchedulerProperties());
+        engine.startCustomEventScheduler(context, events, broadcaster, new EventSchedulerProperties());
 
         // check if all events are called
         Thread.sleep(600);
 
         engine.shutdownThreadsNow();
-        
-        assertEquals("expected 5 caller calls", 5, callerCount.intValue());
+
         assertEquals("expected 5 broadcast calls", 5, broadcastCount.intValue());
     }
 

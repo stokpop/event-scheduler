@@ -1,6 +1,6 @@
 package nl.stokpop.eventscheduler;
 
-import nl.stokpop.eventscheduler.api.PerfanaConnectionSettingsBuilder;
+import nl.stokpop.eventscheduler.api.EventSchedulerSettingsBuilder;
 import nl.stokpop.eventscheduler.api.TestContextBuilder;
 import org.junit.Test;
 
@@ -11,13 +11,13 @@ public class EventSchedulerBuilderTest {
 
     @Test
     public void createWithAlternativeClass() {
-         String alternativeClassCustomEvents = "  @generator-class=io.perfana.event.generator.EventScheduleGeneratorDefault \n" +
+         String alternativeClassCustomEvents = "  @generator-class=nl.stokpop.eventscheduler.generator.EventGeneratorDefault \n" +
                  "  eventSchedule=PT1M|do-something \n";
 
          EventSchedulerBuilder eventSchedulerBuilder = new EventSchedulerBuilder()
                  .setCustomEvents(alternativeClassCustomEvents)
                  .setTestContext(new TestContextBuilder().build())
-                 .setPerfanaConnectionSettings(new PerfanaConnectionSettingsBuilder().build());
+                 .setEventSchedulerSettings(new EventSchedulerSettingsBuilder().build());
 
         EventScheduler eventScheduler = eventSchedulerBuilder.build(new URLClassLoader(new URL[]{}, Thread.currentThread().getContextClassLoader()));
 

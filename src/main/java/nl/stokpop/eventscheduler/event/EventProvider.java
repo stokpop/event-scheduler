@@ -1,6 +1,6 @@
 package nl.stokpop.eventscheduler.event;
 
-import nl.stokpop.eventscheduler.api.PerfanaClientLogger;
+import nl.stokpop.eventscheduler.api.EventSchedulerLogger;
 import nl.stokpop.eventscheduler.api.TestContext;
 
 import java.util.ArrayList;
@@ -11,20 +11,20 @@ import java.util.function.Consumer;
 
 public class EventProvider implements EventBroadcaster {
 
-    private final PerfanaClientLogger logger;
+    private final EventSchedulerLogger logger;
 
     private final List<Event> events;
 
-    EventProvider(List<Event> events, PerfanaClientLogger logger) {
+    EventProvider(List<Event> events, EventSchedulerLogger logger) {
         this.events = Collections.unmodifiableList(new ArrayList<>(events));
         this.logger = logger;
     }
 
-    public static EventProvider createInstanceWithEventsFromClasspath(PerfanaClientLogger logger) {
+    public static EventProvider createInstanceWithEventsFromClasspath(EventSchedulerLogger logger) {
         return createInstanceWithEventsFromClasspath(logger, null);
     }
 
-    public static EventProvider createInstanceWithEventsFromClasspath(PerfanaClientLogger logger, ClassLoader classLoader) {
+    public static EventProvider createInstanceWithEventsFromClasspath(EventSchedulerLogger logger, ClassLoader classLoader) {
         ServiceLoader<Event> perfanaEventLoader = classLoader == null
                 ? ServiceLoader.load(Event.class)
                 : ServiceLoader.load(Event.class, classLoader);
@@ -52,13 +52,23 @@ public class EventProvider implements EventBroadcaster {
     public void broadCastKeepAlive(TestContext context, EventSchedulerProperties properties) {
         logger.debug("broadcast keep alive event");
         events.forEach(catchExceptionWrapper(event -> event.keepAlive(context, properties.get(event))));
+    }
 
+    @Override
+    public void broadcastAbortTest(TestContext context, EventSchedulerProperties properties) {
+        logger.debug("broadcast abort test event");
+        events.forEach(catchExceptionWrapper(event -> event.keepAlive(context, properties.get(event))));
     }
 
     @Override
     public void broadcastCustomEvent(TestContext context, EventSchedulerProperties properties, ScheduleEvent scheduleEvent) {
         logger.info("broadcast " + scheduleEvent.getName() + " custom event");
         events.forEach(catchExceptionWrapper(event -> event.customEvent(context, properties.get(event), scheduleEvent)));
+    }
+
+    @Override
+    public void broadcastCheckResults(TestContext context, EventSchedulerProperties eventProperties) {
+
     }
 
     /**

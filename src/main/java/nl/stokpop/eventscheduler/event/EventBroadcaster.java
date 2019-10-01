@@ -10,5 +10,10 @@ public interface EventBroadcaster {
 
     void broadCastKeepAlive(TestContext context, EventSchedulerProperties eventProperties);
 
+    void broadcastAbortTest(TestContext context, EventSchedulerProperties eventProperties);
+
     void broadcastCustomEvent(TestContext context, EventSchedulerProperties eventProperties, ScheduleEvent event);
+
+    void broadcastCheckResults(TestContext context, EventSchedulerProperties eventProperties);
+
 }

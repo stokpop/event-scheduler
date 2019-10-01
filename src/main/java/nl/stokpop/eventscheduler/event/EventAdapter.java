@@ -26,6 +26,16 @@ public abstract class EventAdapter implements Event {
     }
 
     @Override
+    public void abortTest(TestContext context, EventProperties properties) {
+
+    }
+
+    @Override
+    public void checkTest(TestContext context, EventProperties properties) {
+
+    }
+
+    @Override
     public void customEvent(TestContext context, EventProperties properties, ScheduleEvent scheduleEvent) {
 
     }

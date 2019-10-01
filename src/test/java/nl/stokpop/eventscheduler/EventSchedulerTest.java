@@ -1,15 +1,17 @@
-package io.perfana.test;
+package nl.stokpop.eventscheduler;
 
 import nl.stokpop.eventscheduler.EventScheduler;
 import nl.stokpop.eventscheduler.EventSchedulerBuilder;
-import nl.stokpop.eventscheduler.api.PerfanaClientLogger;
-import nl.stokpop.eventscheduler.api.PerfanaClientLoggerStdOut;
-import nl.stokpop.eventscheduler.api.PerfanaConnectionSettings;
-import nl.stokpop.eventscheduler.api.PerfanaConnectionSettingsBuilder;
+import nl.stokpop.eventscheduler.api.EventSchedulerLogger;
+import nl.stokpop.eventscheduler.api.EventSchedulerLoggerStdOut;
+import nl.stokpop.eventscheduler.api.EventSchedulerSettings;
+import nl.stokpop.eventscheduler.api.EventSchedulerSettingsBuilder;
 import nl.stokpop.eventscheduler.api.TestContext;
 import nl.stokpop.eventscheduler.api.TestContextBuilder;
 import org.junit.Test;
 
+import java.time.Duration;
+import java.time.temporal.TemporalUnit;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -29,7 +31,7 @@ public class EventSchedulerTest
     @Test
     public void create() {
 
-        PerfanaClientLogger testLogger = new PerfanaClientLoggerStdOut();
+        EventSchedulerLogger testLogger = new EventSchedulerLoggerStdOut();
 
         String eventSchedule =
                 "   \n" +
@@ -39,10 +41,8 @@ public class EventSchedulerTest
                 "   PT900S|scale-up|{ 'replicas':2 }\n" +
                 "  \n";
 
-        PerfanaConnectionSettings settings = new PerfanaConnectionSettingsBuilder()
-                .setPerfanaUrl("http://perfUrl")
-                .setRetryMaxCount("5")
-                .setRetryTimeInSeconds("3")
+        EventSchedulerSettings settings = new EventSchedulerSettingsBuilder()
+                .setKeepAliveInterval(Duration.ofMinutes(2))
                 .build();
 
         TestContext context = new TestContextBuilder()
@@ -59,7 +59,7 @@ public class EventSchedulerTest
                 .build();
 
         EventScheduler client = new EventSchedulerBuilder()
-                .setPerfanaConnectionSettings(settings)
+                .setEventSchedulerSettings(settings)
                 .setTestContext(context)
                 .setAssertResultsEnabled(true)
                 .addEventProperty("myClass", "name", "value")
@@ -68,7 +68,7 @@ public class EventSchedulerTest
                 .build();
 
         assertNotNull(client);
-        assertEquals("http://perfUrl", settings.getPerfanaUrl());
+        assertEquals(120, settings.getKeepAliveDuration().getSeconds());
 
 //        client.startSession();
 //        client.stopSession();
@@ -96,96 +96,27 @@ public class EventSchedulerTest
                 .setTags((String)null)
                 .build();
 
-        PerfanaConnectionSettings settings = new PerfanaConnectionSettingsBuilder()
-                .setPerfanaUrl(null)
-                .setRetryMaxCount(null)
-                .setRetryTimeInSeconds(null)
+        EventSchedulerSettings settings = new EventSchedulerSettingsBuilder()
                 .setKeepAliveInterval(null)
                 .setKeepAliveTimeInSeconds(null)
-                .setRetryDuration(null).build();
+                .build();
 
         new EventSchedulerBuilder()
                 .setTestContext(context)
-                .setPerfanaConnectionSettings(settings)
+                .setEventSchedulerSettings(settings)
                 .setCustomEvents(null)
                 .setBroadcaster(null)
                 .build();
-
     }
 
     @Test
     public void createWithFail() {
-
-        PerfanaConnectionSettings settings =
-                new PerfanaConnectionSettingsBuilder()
-                        .setRetryTimeInSeconds("P5")
+        EventSchedulerSettings settings =
+                new EventSchedulerSettingsBuilder()
+                        .setKeepAliveTimeInSeconds("120")
                         .build();
 
         assertNotNull(settings);
-
     }
 
-    @Test
-    public void createJsonMessage() {
-        Map<String, String> vars = new HashMap<>();
-
-        String var1 = "hostname";
-        String value1 = "foo.com";
-        vars.put(var1, value1);
-
-        String var2 = "env";
-        String value2 = "performance-test-2-env";
-
-        String tag1 = "   tag-1 ";
-        String tag2 = " tag-2  ";
-        String tags = String.join(",", Arrays.asList(tag1, tag2));
-        vars.put(var2, value2);
-
-        String annotations = "Xmx set to 2g";
-        TestContext context = new TestContextBuilder()
-                .setAnnotations(annotations)
-                .setVariables(vars)
-                .setTags(tags)
-                .build();
-
-        String json = EventScheduler.perfanaMessageToJson(context, false);
-
-        assertTrue(json.contains(annotations));
-        assertTrue(json.contains(var1));
-        assertTrue(json.contains(var2));
-        assertTrue(json.contains(value1));
-        assertTrue(json.contains(value2));
-        assertTrue(json.contains(tag1.trim()));
-        assertTrue(json.contains(tag2.trim()));
-
-    }
-
-    @Test
-    public void testVarsMissing() {
-        /*
-         * <variables>
-         *    <property>
-         *        <name>foo</name>
-         *        <value>1</value>
-         *    </property>
-         *    <property>
-         *        <name>bar</name>
-         *        <value>2</value>
-         *    </property>
-         * </variables>
-         */
-        Properties props = new Properties();
-        props.put("foo", "foo-1");
-        props.put("bar", "bar-2");
-        
-        TestContext context = new TestContextBuilder()
-                .setVariables(props)
-                .build();
-
-        String json = EventScheduler.perfanaMessageToJson(context, false);
-        assertTrue(json.contains("foo"));
-        assertTrue(json.contains("bar"));
-        assertTrue(json.contains("foo-1"));
-        assertTrue(json.contains("bar-2"));
-    }
 }

@@ -44,11 +44,27 @@ public interface Event {
     void keepAlive(TestContext context, EventProperties properties);
 
     /**
+     * Called for test abort.
+     * @param context the test run context
+     * @param properties e.g. REST_URL="https://my-rest-url"
+     */
+    void abortTest(TestContext context, EventProperties properties);
+
+    /**
+     * Called to check test results. Can be used to have a test run fail or succeed.
+     * Fail by throwing a runtime exception.
+     * @param context the test run context
+     * @param properties e.g. REST_URL="https://my-rest-url"
+     */
+    void checkTest(TestContext context, EventProperties properties);
+
+    /**
      * Called for each custom event, according to the custom even schedule.
      * @param context the test run context
      * @param properties e.g. REST_URL="https://my-rest-url"
      * @param scheduleEvent the custom event, use to execute specific behaviour in the event handler
      */
     void customEvent(TestContext context, EventProperties properties, ScheduleEvent scheduleEvent);
-    
+
+
 }

@@ -1,4 +1,4 @@
-package nl.stokpop.eventscheduler.event.generator;
+package nl.stokpop.eventscheduler.generator;
 
 import org.junit.Test;
 

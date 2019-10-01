@@ -1,6 +1,6 @@
 package nl.stokpop.eventscheduler.event;
 
-import nl.stokpop.eventscheduler.exception.PerfanaClientRuntimeException;
+import nl.stokpop.eventscheduler.exception.EventSchedulerRuntimeException;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -121,7 +121,7 @@ public class ScheduleEventTest {
         assertNotEquals(nastyJavascript, nameAndDescription[1]);
     }
 
-    @Test(expected = PerfanaClientRuntimeException.class)
+    @Test(expected = EventSchedulerRuntimeException.class)
     public void extractNameAndDescription6() {
         ScheduleEvent.extractNameAndDescription("my-name( x  ");
     }

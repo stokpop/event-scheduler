@@ -1,6 +1,6 @@
 package nl.stokpop.eventscheduler.event;
 
-import nl.stokpop.eventscheduler.exception.PerfanaClientRuntimeException;
+import nl.stokpop.eventscheduler.exception.EventSchedulerRuntimeException;
 
 import java.util.Collections;
 import java.util.Map;
@@ -26,8 +26,8 @@ public class EventSchedulerProperties {
     private static String determineCanonicalName(Event event) {
         String canonicalName = event.getClass().getCanonicalName();
         if (canonicalName == null) {
-            String msg = String.format("Anonymous classes are not allowed for PerfanaEvent, sorry. [%s]", event.getClass());
-            throw new PerfanaClientRuntimeException(msg);
+            String msg = String.format("Anonymous classes are not allowed for Even classes, sorry. [%s]", event.getClass());
+            throw new EventSchedulerRuntimeException(msg);
         }
         return canonicalName;
     }
