@@ -162,7 +162,7 @@ For example:
 # custom event schedule generator
 
 To create your own event schedule you can implement your own
-`io.perfana.event.EventScheduleGenerator`.
+`io.perfana.event.EventGenerator`.
 
 And add the following generator-class and settings to the customPerfanaEvents tag
 of the gatling or jmeter plugin (instead of a verbatim list of events).
@@ -183,4 +183,4 @@ Properties that start with @-sign are so-called "meta" properties and
 should generally not be used as properties inside the implementation class.   
 
 Note: if classes are not available on the default classpath of the Thread, you can provide your
-own ClassLoader via `io.perfana.client.PerfanaClientBuilder.build(java.lang.ClassLoader)`.
+own ClassLoader via `io.perfana.client.EventSchedulerBuilder.build(java.lang.ClassLoader)`.
