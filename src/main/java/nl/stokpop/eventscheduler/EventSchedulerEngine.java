@@ -91,13 +91,13 @@ class EventSchedulerEngine {
             scheduleEvents.forEach(event -> addToExecutor(executorCustomEvents, context, event, eventProperties, broadcaster));
         }
         else {
-            logger.info("no custom Perfana schedule events found");
+            logger.info("no custom schedule events found");
         }
     }
 
     public static String createEventScheduleMessage(List<ScheduleEvent> scheduleEvents) {
         StringBuilder message = new StringBuilder();
-        message.append("=== custom Perfana events schedule ===");
+        message.append("=== custom events schedule ===");
         scheduleEvents.forEach(event -> message
                 .append("\n==> ")
                 .append(String.format("ScheduleEvent %-36.36s [fire-at=%-8s settings=%-50.50s]", event.getNameDescription(), event.getDuration(), event.getSettings())));
@@ -106,7 +106,7 @@ class EventSchedulerEngine {
 
     private ScheduledExecutorService createKeepAliveScheduler() {
         return Executors.newSingleThreadScheduledExecutor(r -> {
-            String threadName = "Perfana-Keep-Alive-Thread";
+            String threadName = "Keep-Alive-Thread";
             logger.info("create new thread: " + threadName);
             return new Thread(r, threadName);
         });
@@ -114,10 +114,10 @@ class EventSchedulerEngine {
 
     private ScheduledExecutorService createCustomEventScheduler() {
         return Executors.newScheduledThreadPool(2, new ThreadFactory() {
-            private final AtomicInteger perfanaThreadCount = new AtomicInteger(0);
+            private final AtomicInteger threadCount = new AtomicInteger(0);
             @Override
             public Thread newThread(Runnable r) {
-                String threadName = "Perfana-Custom-Event-Thread-" + perfanaThreadCount.incrementAndGet();
+                String threadName = "Custom-Event-Thread-" + threadCount.incrementAndGet();
                 logger.info("create new thread: " + threadName);
                 return new Thread(r, threadName);
             }

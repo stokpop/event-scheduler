@@ -25,12 +25,12 @@ public class EventProvider implements EventBroadcaster {
     }
 
     public static EventProvider createInstanceWithEventsFromClasspath(EventSchedulerLogger logger, ClassLoader classLoader) {
-        ServiceLoader<Event> perfanaEventLoader = classLoader == null
+        ServiceLoader<Event> eventLoader = classLoader == null
                 ? ServiceLoader.load(Event.class)
                 : ServiceLoader.load(Event.class, classLoader);
-        // java 9+: List<PerfanaEvent> events = perfanaEventLoader.stream().map(ServiceLoader.Provider::get).collect(Collectors.toList());
+        // java 9+: List<Event> events = eventLoader.stream().map(ServiceLoader.Provider::get).collect(Collectors.toList());
         List<Event> events = new ArrayList<>();
-        for (Event event : perfanaEventLoader) {
+        for (Event event : eventLoader) {
             events.add(event);
         }
         return new EventProvider(events, logger);
@@ -79,7 +79,7 @@ public class EventProvider implements EventBroadcaster {
             try {
                 consumer.accept(event);
             } catch (Exception e) {
-                String message = String.format("exception in perfana event (%s)", event.getName());
+                String message = String.format("exception in event (%s)", event.getName());
                 if (logger != null) {
                     logger.error(message, e);
                 }

@@ -58,7 +58,7 @@ public class EventSchedulerTest
                 .setTags("")
                 .build();
 
-        EventScheduler client = new EventSchedulerBuilder()
+        EventScheduler scheduler = new EventSchedulerBuilder()
                 .setEventSchedulerSettings(settings)
                 .setTestContext(context)
                 .setAssertResultsEnabled(true)
@@ -67,11 +67,11 @@ public class EventSchedulerTest
                 .setLogger(testLogger)
                 .build();
 
-        assertNotNull(client);
+        assertNotNull(scheduler);
         assertEquals(120, settings.getKeepAliveDuration().getSeconds());
 
-//        client.startSession();
-//        client.stopSession();
+//        scheduler.startSession();
+//        scheduler.stopSession();
     }
 
     /**

@@ -26,7 +26,7 @@ public class EventGeneratorProvider {
         ServiceLoader<EventGenerator> generatorLoader = classLoader == null
                 ? ServiceLoader.load(EventGenerator.class)
                 : ServiceLoader.load(EventGenerator.class, classLoader);
-        // java 9+: List<PerfanaEvent> generators = perfanaEventLoader.stream().map(ServiceLoader.Provider::get).collect(Collectors.toList());
+        // java 9+: List<Event> generators = generatorLoader.stream().map(ServiceLoader.Provider::get).collect(Collectors.toList());
         Map<String, EventGenerator> generators = new HashMap<>();
         for (EventGenerator generator : generatorLoader) {
             String generatorName = generator.getClass().getName();

@@ -10,7 +10,6 @@ import nl.stokpop.eventscheduler.generator.EventGeneratorDefault;
 import nl.stokpop.eventscheduler.generator.EventGeneratorProvider;
 import nl.stokpop.eventscheduler.generator.EventGeneratorProperties;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -89,13 +88,13 @@ public class EventSchedulerBuilder {
      * and does not contain classes from the project context, such as the custom event providers used in the project.
      *
      * @param classLoader the class loader, if null the default classloader of Java's ServiceLoader will be used
-     * @return a new PerfanaClient
+     * @return a new EventScheduler
      */
     public EventScheduler build(ClassLoader classLoader) {
 
         // get default broadcaster if no broadcaster was given
         if (broadcaster == null) {
-            logger.info("create default Perfana event broadcaster");
+            logger.info("create default event broadcaster");
             broadcaster = EventProvider.createInstanceWithEventsFromClasspath(logger, classLoader);
         }
         
@@ -104,7 +103,7 @@ public class EventSchedulerBuilder {
         }
 
         if (eventSchedulerSettings == null) {
-            throw new EventSchedulerRuntimeException("PerfanaConnectionSettings must be set, it is null.");
+            throw new EventSchedulerRuntimeException("EventSchedulerSettings must be set, it is null.");
         }
 
         List<ScheduleEvent> scheduleEvents = generateEventSchedule(testContext, customEventsText, logger, classLoader);
@@ -138,9 +137,7 @@ public class EventSchedulerBuilder {
             eventGeneratorProperties = new EventGeneratorProperties(properties);
         }
 
-        List<ScheduleEvent> scheduleEvents = Collections.emptyList();
-        scheduleEvents = eventGenerator.generate(context, eventGeneratorProperties);
-        return scheduleEvents;
+        return eventGenerator.generate(context, eventGeneratorProperties);
     }
 
     /**

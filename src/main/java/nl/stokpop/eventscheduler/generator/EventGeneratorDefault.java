@@ -16,10 +16,10 @@ public class EventGeneratorDefault implements EventGenerator {
 
     @Override
     public List<ScheduleEvent> generate(TestContext context, EventGeneratorProperties properties) {
-        return createPerfanaTestEvents(properties.getProperty(EVENT_SCHEDULE_TAG));
+        return createTestEvents(properties.getProperty(EVENT_SCHEDULE_TAG));
     }
 
-    public List<ScheduleEvent> createPerfanaTestEvents(String eventsAsString) {
+    public List<ScheduleEvent> createTestEvents(String eventsAsString) {
         if (eventsAsString != null) {
             BufferedReader eventReader = new BufferedReader(new StringReader(eventsAsString));
             List<String> events = eventReader.lines()
@@ -38,6 +38,4 @@ public class EventGeneratorDefault implements EventGenerator {
                 .map(ScheduleEvent::createFromLine)
                 .collect(Collectors.toList());
     }
-
-
 }

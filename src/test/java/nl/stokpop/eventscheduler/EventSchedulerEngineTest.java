@@ -26,7 +26,7 @@ public class EventSchedulerEngineTest {
                 "PT2M|event(my description: phase 2(bar))|settings=true\n" +
                 "PT3M|event(my description: phase 3(very long event description test))|settings=true";
 
-        List<ScheduleEvent> events = new EventGeneratorDefault().createPerfanaTestEvents(eventsAsText);
+        List<ScheduleEvent> events = new EventGeneratorDefault().createTestEvents(eventsAsText);
 
         String eventScheduleMessage = EventSchedulerEngine.createEventScheduleMessage(events);
 

@@ -5,7 +5,7 @@ import nl.stokpop.eventscheduler.api.TestContext;
 /**
  * This interface can be implemented in other jars and be put on the classpath.
  *
- * Provide a file in META-INF/services/io.perfana.event.PerfanaEvent that contains the
+ * Provide a file in META-INF/services/nl.stokpop.eventscheduler.Event that contains the
  * fully qualified name of the implementing class.
  *
  * This class will be used when these events are called. Possibly you can even provide multiple implementations
