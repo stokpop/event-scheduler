@@ -28,7 +28,7 @@ public class EventProvider implements EventBroadcaster {
         ServiceLoader<Event> eventLoader = classLoader == null
                 ? ServiceLoader.load(Event.class)
                 : ServiceLoader.load(Event.class, classLoader);
-        // java 9+: List<Event> events = eventLoader.stream().map(ServiceLoader.Provider::get).collect(Collectors.toList());
+        // java 9+: List<PerfanaEvent> events = perfanaEventLoader.stream().map(ServiceLoader.Provider::get).collect(Collectors.toList());
         List<Event> events = new ArrayList<>();
         for (Event event : eventLoader) {
             events.add(event);

@@ -58,13 +58,10 @@ public final class EventScheduler {
 
     /**
      * Stop a test session.
-     * @throws EventSchedulerException when something fails in executing an event
      */
-    public void stopSession() throws EventSchedulerException {
+    public void stopSession() {
         logger.info("Stop test session.");
         isSessionStopped = true;
-        
-        executorEngine.shutdownThreadsNow();
 
         broadcaster.broadcastAfterTest(context, eventProperties);
 
@@ -72,6 +69,8 @@ public final class EventScheduler {
             // TODO: think about how to succeed or fail based on checks.
             broadcaster.broadcastCheckResults(context, eventProperties);
         }
+
+        executorEngine.shutdownThreadsNow();
 
         logger.info("All broadcasts for stop test session are done");
     }
