@@ -6,7 +6,7 @@
 
     <groupId>nl.stokpop</groupId>
     <artifactId>event-scheduler</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.0-SNAPSHOT</version>
     <description>Java generic event scheduler to be used during long running processes such as load tests.
 	Specific event implementations can be registered via the classpath.</description>
     <packaging>jar</packaging>
