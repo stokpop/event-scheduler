@@ -1,0 +1,149 @@
+plugins {
+    id 'java'
+    id 'java-library'
+    id 'de.marcphilipp.nexus-publish' version '0.3.0'
+    id 'maven-publish'
+    id 'signing'
+    // check dependency updates: ./gradlew dependencyUpdates -Drevision=release
+    id 'com.github.ben-manes.versions' version '0.25.0'
+    id 'com.github.hierynomus.license' version '0.15.0'
+    id 'io.codearte.nexus-staging' version '0.21.1'
+}
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+    jcenter()
+}
+
+dependencies {
+    testCompile 'junit:junit:4.12'
+}
+
+group = 'nl.stokpop'
+version = '1.0.0-SNAPSHOT'
+description = 'event-scheduler'
+sourceCompatibility = '1.8'
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            from(components.java)
+        }
+    }
+}
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}
+
+license {
+    header = file("src/main/resources/META-INF/LICENSE.txt")
+    ext.year = Calendar.getInstance().get(Calendar.YEAR)
+    ext.name = 'Peter Paul Bakker, Stokpop Software Solutions'
+    exclude "**/*.txt"
+    mapping {
+        // the standard java style makes intellij complain about dangling javadoc
+        java = "SLASHSTAR_STYLE"
+    }
+}
+
+nexusPublishing {
+    repositories {
+        sonatype()
+    }
+}
+
+task sourceJar(type: Jar) {
+    classifier "sources"
+    from sourceSets.main.allJava
+}
+
+task javadocJar(type: Jar, dependsOn: javadoc) {
+    classifier "javadoc"
+    from javadoc.destinationDir
+}
+
+artifacts {
+    archives jar
+    archives sourceJar
+    archives javadocJar
+}
+
+if (project.hasProperty('release')) {
+
+    subprojects {
+
+        task javadocJar(type: Jar) {
+            archiveClassifier = 'javadoc'
+            from javadoc
+        }
+
+        task sourcesJar(type: Jar) {
+            archiveClassifier = 'sources'
+            from sourceSets.main.allSource
+        }
+
+        artifacts {
+            archives javadocJar, sourcesJar
+        }
+    }
+
+    allprojects {
+        apply plugin: 'signing'
+        apply plugin: 'maven'
+
+        // Signature of artifacts
+        signing {
+            sign configurations.archives
+        }
+
+        // OSSRH publication
+        uploadArchives {
+            repositories {
+                mavenDeployer {
+                    // POM signature
+                    beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
+                    // Target repository
+                    repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
+                        authentication(userName: ossrhUser, password: ossrhPassword)
+                    }
+                    pom.project {
+                        name project.name
+                        description project.description
+                        packaging 'jar'
+                        url 'https://github.com/stokpop/lograter.git'
+
+                        scm {
+                            connection 'scm:git:https://github.com/stokpop/lograter.git'
+                            developerConnection 'scm:git:git@github.com:stokpop/lograter.git'
+                            url 'https://github.com/stokpop/lograter.git'
+                        }
+
+                        licenses {
+                            license {
+                                name 'The Apache Software License, Version 2.0'
+                                url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                                distribution 'repo'
+                            }
+                        }
+
+                        developers {
+                            developer {
+                                id = 'stokpop'
+                                name = 'Peter Paul Bakker'
+                                email = 'peter.paul.bakker@stokpop.nl'
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+    }
+}
+
+nexusStaging {
+    username = ossrhUser
+    password = ossrhPassword
+}
