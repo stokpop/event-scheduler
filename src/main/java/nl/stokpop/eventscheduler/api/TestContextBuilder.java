@@ -104,7 +104,8 @@ public class TestContextBuilder {
     }
 
     /**
-     * A comma separated list of tags.
+     * @param tagsSeparatedByCommas example: foo,bar,zzz
+     * @return this
      */
     public TestContextBuilder setTags(String tagsSeparatedByCommas) {
         this.tags = EventSchedulerUtils.splitAndTrim(tagsSeparatedByCommas,",");

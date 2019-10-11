@@ -143,7 +143,7 @@ public class EventSchedulerBuilder {
     /**
      * Provide schedule event as "duration|eventname(description)|json-settings".
      * The duration is in ISO-8601 format period format, e.g. 3 minutes 15 seconds
-     * is P3M15S.
+     * is PT3M15S.
      *
      * One schedule event per line.
      *
@@ -153,6 +153,9 @@ public class EventSchedulerBuilder {
      *      {@literal @}generator-class=nl.stokpop.event.MyEventGenerator
      *      foo=bar
      * </pre>
+     *
+     * @param customEventsText e.g. PT3M15S|heapdump(1st heapdump)|server=test-server-1
+     * @return this
      */
     public EventSchedulerBuilder setCustomEvents(String customEventsText) {
         if (customEventsText != null) {

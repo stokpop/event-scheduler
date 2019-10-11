@@ -50,15 +50,16 @@ public class ScheduleEvent {
 
     /**
      * Use this format: duration|event-name(description)|settings
+     *
      * Note: description and settings are optional. duration is in ISO-8601 format.
      *
      * The duration is the time from the start of the test until the event to fire.
      *
      * Examples:
-     * <il>
+     * <ul>
      *     <li>PT1M|change-backend-delay|delay=PT2S</li>
      *     <li>PT5M|change-backend-delay(set to extreme delay to test timeouts)|delay=PT10M</li>
-     * </il>
+     * </ul>
      *
      * @param line line that is separated by duration|event-name(description)|settings
      * @return new ScheduleEvent
