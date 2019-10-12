@@ -23,7 +23,7 @@ public interface EventBroadcaster {
 
     void broadcastAfterTest(TestContext context, EventSchedulerProperties eventProperties);
 
-    void broadCastKeepAlive(TestContext context, EventSchedulerProperties eventProperties);
+    void broadcastKeepAlive(TestContext context, EventSchedulerProperties eventProperties);
 
     void broadcastAbortTest(TestContext context, EventSchedulerProperties eventProperties);
 

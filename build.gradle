@@ -1,3 +1,5 @@
+import org.gradle.internal.os.OperatingSystem
+
 plugins {
     id 'java'
     id 'java-library'
@@ -17,11 +19,12 @@ repositories {
 }
 
 dependencies {
-    testCompile 'junit:junit:4.12'
+    testImplementation 'junit:junit:4.12'
+    testImplementation 'org.mockito:mockito-core:3.1.0'
 }
 
 group = 'nl.stokpop'
-version = '1.0.0'
+version = '1.0.1-SNAPSHOT'
 description = 'event-scheduler'
 sourceCompatibility = '1.8'
 
@@ -38,10 +41,13 @@ tasks.withType(JavaCompile) {
 }
 
 license {
+    // check is broken on windows, 
+    if (OperatingSystem.current().isWindows()) ignoreFailures = true
     header = file("src/main/resources/META-INF/LICENSE.txt")
     ext.year = Calendar.getInstance().get(Calendar.YEAR)
     ext.name = 'Peter Paul Bakker, Stokpop Software Solutions'
     exclude "**/*.txt"
+    exclude "src/main/resources/META-INF/services/*"
     mapping {
         // the standard java style makes intellij complain about dangling javadoc
         java = "SLASHSTAR_STYLE"
@@ -144,6 +150,6 @@ if (project.hasProperty('release')) {
 }
 
 nexusStaging {
-    username = ossrhUser
-    password = ossrhPassword
+    username = project.properties['ossrhUser'] ?: "noUser"
+    password = project.properties['ossrhPassword'] ?: "noPassword"
 }

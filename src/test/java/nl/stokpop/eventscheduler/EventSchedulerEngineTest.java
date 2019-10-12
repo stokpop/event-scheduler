@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.*;
 
 public class EventSchedulerEngineTest {
 
@@ -48,7 +49,6 @@ public class EventSchedulerEngineTest {
         System.out.println(eventScheduleMessage);
         String search = "phase";
         assertEquals(3, EventSchedulerUtils.countOccurrences(search, eventScheduleMessage));
-
     }
 
     @Test
@@ -65,52 +65,25 @@ public class EventSchedulerEngineTest {
 
         TestContext context = new TestContextBuilder().build();
 
-        final AtomicInteger broadcastCount = new AtomicInteger(0);
+        EventBroadcaster eventBroadcaster = mock(EventBroadcaster.class);
+        // expect 5 calls, two will throw an Exception, see if flow continues
+        doThrow(new EventSchedulerRuntimeException("help! broadcastCustomEvent error!"))
+                .doNothing()
+                .doNothing()
+                .doThrow(new EventSchedulerRuntimeException("help! broadcastCustomEvent error!"))
+                .doNothing()
+                .when(eventBroadcaster).broadcastCustomEvent(any(), any(), any());
 
-        EventBroadcaster broadcaster = new EventBroadcaster() {
-            @Override
-            public void broadcastBeforeTest(TestContext context, EventSchedulerProperties eventProperties) {
-                System.out.println("broadcast: before test");
-            }
+        EventSchedulerProperties eventProperties = new EventSchedulerProperties();
+        engine.startCustomEventScheduler(context, events, eventBroadcaster, eventProperties);
 
-            @Override
-            public void broadcastAfterTest(TestContext context, EventSchedulerProperties eventProperties) {
-                System.out.println("broadcast: after test");
-            }
-
-            @Override
-            public void broadCastKeepAlive(TestContext context, EventSchedulerProperties eventProperties) {
-                System.out.println("broadcast: keep alive");
-            }
-
-            @Override
-            public void broadcastAbortTest(TestContext context, EventSchedulerProperties eventProperties) {
-                System.out.println("broadcast: abort test");
-            }
-
-            @Override
-            public void broadcastCustomEvent(TestContext context, EventSchedulerProperties eventProperties, ScheduleEvent event) {
-                System.out.println("broadcast: custom event: " + event);
-                broadcastCount.incrementAndGet();
-                if (broadcastCount.intValue() < 3) {
-                    throw new EventSchedulerRuntimeException("help! broadcastCustomEvent: " + event) ;
-                }
-            }
-
-            @Override
-            public void broadcastCheckResults(TestContext context, EventSchedulerProperties eventProperties) {
-                System.out.println("broadcast: check results");
-            }
-        };
-
-        engine.startCustomEventScheduler(context, events, broadcaster, new EventSchedulerProperties());
-
-        // check if all events are called
+        // check if all events are called at 100, 200, 300, 400 and 500 ms
         Thread.sleep(600);
 
         engine.shutdownThreadsNow();
 
-        assertEquals("expected 5 broadcast calls", 5, broadcastCount.intValue());
+        verify(eventBroadcaster, times(5))
+                .broadcastCustomEvent(eq(context), eq(eventProperties), any(ScheduleEvent.class));
     }
 
 }

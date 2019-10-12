@@ -64,7 +64,7 @@ public class EventProvider implements EventBroadcaster {
     }
     
     @Override
-    public void broadCastKeepAlive(TestContext context, EventSchedulerProperties properties) {
+    public void broadcastKeepAlive(TestContext context, EventSchedulerProperties properties) {
         logger.debug("broadcast keep alive event");
         events.forEach(catchExceptionWrapper(event -> event.keepAlive(context, properties.get(event))));
     }
@@ -72,7 +72,7 @@ public class EventProvider implements EventBroadcaster {
     @Override
     public void broadcastAbortTest(TestContext context, EventSchedulerProperties properties) {
         logger.debug("broadcast abort test event");
-        events.forEach(catchExceptionWrapper(event -> event.keepAlive(context, properties.get(event))));
+        events.forEach(catchExceptionWrapper(event -> event.abortTest(context, properties.get(event))));
     }
 
     @Override
@@ -82,8 +82,9 @@ public class EventProvider implements EventBroadcaster {
     }
 
     @Override
-    public void broadcastCheckResults(TestContext context, EventSchedulerProperties eventProperties) {
-
+    public void broadcastCheckResults(TestContext context, EventSchedulerProperties properties) {
+        logger.info("broadcast check test");
+        events.forEach(catchExceptionWrapper(event -> event.checkTest(context, properties.get(event))));
     }
 
     /**

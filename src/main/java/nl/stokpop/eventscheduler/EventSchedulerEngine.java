@@ -155,7 +155,7 @@ class EventSchedulerEngine {
         public void run() {
             // TODO make recurring calls also part of the generic EventGenerators
             try {
-                broadcaster.broadCastKeepAlive(context, eventProperties);
+                broadcaster.broadcastKeepAlive(context, eventProperties);
             } catch (Exception e) {
                 logger.error("Broadcast keep-alive failed", e);
             }

@@ -25,9 +25,41 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.internal.verification.VerificationModeFactory.times;
 
 public class EventProviderTest {
+
+    @Test
+    public void broadcastAbort() {
+
+        Event myEvent = mock(Event.class);
+        ScheduleEvent scheduleEvent = mock(ScheduleEvent.class);
+
+        List<Event> events = new ArrayList<>();
+        // this should succeed
+        events.add(myEvent);
+
+        EventProvider eventProvider = new EventProvider(events, new EventSchedulerLoggerStdOut());
+
+        TestContext testContext = new TestContextBuilder().build();
+        EventSchedulerProperties properties = new EventSchedulerProperties();
+        EventProperties eventProperties = properties.get(myEvent);
+
+        eventProvider.broadcastBeforeTest(testContext, properties);
+        eventProvider.broadcastKeepAlive(testContext, properties);
+        eventProvider.broadcastCustomEvent(testContext, properties, scheduleEvent);
+        eventProvider.broadcastCheckResults(testContext, properties);
+        eventProvider.broadcastAbortTest(testContext, properties);
+
+        verify(myEvent, times(1)).beforeTest(testContext, eventProperties);
+        verify(myEvent, times(1)).keepAlive(testContext, eventProperties);
+        verify(myEvent, times(1)).customEvent(testContext, eventProperties, scheduleEvent);
+        verify(myEvent, times(1)).checkTest(testContext, eventProperties);
+        verify(myEvent, times(1)).abortTest(testContext, eventProperties);
+
+    }
 
     @Test
     public void broadcastCustomEventWithFailureShouldProceed() {

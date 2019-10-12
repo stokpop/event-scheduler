@@ -46,6 +46,22 @@ public class EventProperties {
     }
 
     @Override
+    public int hashCode() {
+        return properties.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == this) { return true; }
+        if (obj instanceof EventProperties) {
+            return properties.equals(((EventProperties) obj).properties);
+        }
+        else {
+            return false;
+        }
+    }
+
+    @Override
     public String toString() {
         return "EventProperties{" +
                 "properties=" + properties +
