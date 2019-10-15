@@ -58,6 +58,8 @@ nexusPublishing {
     repositories {
         sonatype()
     }
+    connectTimeout=Duration.ofMinutes(10)
+    clientTimeout=Duration.ofMinutes(10)
 }
 
 task sourceJar(type: Jar) {
@@ -152,4 +154,6 @@ if (project.hasProperty('release')) {
 nexusStaging {
     username = project.properties['ossrhUser'] ?: "noUser"
     password = project.properties['ossrhPassword'] ?: "noPassword"
+    packageGroup = "nl.stokpop"
+    stagingProfileId = project.properties['ossrhStagingProfileId'] ?: ""
 }
