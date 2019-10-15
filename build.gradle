@@ -24,7 +24,7 @@ dependencies {
 }
 
 group = 'nl.stokpop'
-version = '1.0.1-SNAPSHOT'
+version = '1.0.1'
 description = 'event-scheduler'
 sourceCompatibility = '1.8'
 
