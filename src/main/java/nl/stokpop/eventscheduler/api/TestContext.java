@@ -15,10 +15,19 @@
  */
 package nl.stokpop.eventscheduler.api;
 
-import java.time.Duration;
-import java.util.Map;
-import java.util.List;
+import jdk.nashorn.internal.ir.annotations.Immutable;
 
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Information for a (performance) test run.
+ */
+@Immutable
 public class TestContext {
 
     private final String application;
@@ -43,8 +52,8 @@ public class TestContext {
         this.rampupTime = rampupTime;
         this.plannedDuration = plannedDuration;
         this.annotations = annotations;
-        this.variables = variables;
-        this.tags = tags;
+        this.variables = Collections.unmodifiableMap(new HashMap<>(variables));
+        this.tags = Collections.unmodifiableList(new ArrayList<>(tags));
     }
 
     public String getApplication() {

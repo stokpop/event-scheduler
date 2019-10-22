@@ -13,43 +13,43 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nl.stokpop.eventscheduler.event;
+package nl.stokpop.eventscheduler.log;
+
+import nl.stokpop.eventscheduler.api.EventLogger;
 
 /**
- * Adapter class with empty method implementations of the Event interface.
- * Extend this class so you only have to implement the methods that are used.
- *
- * Always provide a proper name for an Event for traceability.
+ * Logs to dev null.
  */
-public abstract class EventAdapter implements Event {
+public final class EventLoggerDevNull implements EventLogger {
+
+    public static final EventLoggerDevNull INSTANCE = new EventLoggerDevNull();
+
+    private EventLoggerDevNull() {
+    }
 
     @Override
-    public void beforeTest() {
+    public void info(final String message) {
 
     }
 
     @Override
-    public void afterTest() {
+    public void warn(final String message) {
 
     }
 
     @Override
-    public void keepAlive() {
+    public void error(final String message) {
 
     }
 
     @Override
-    public void abortTest() {
+    public void error(final String message, Throwable throwable) {
 
     }
 
     @Override
-    public void checkTest() {
+    public void debug(final String message) {
 
     }
 
-    @Override
-    public void customEvent(CustomEvent scheduleEvent) {
-
-    }
 }

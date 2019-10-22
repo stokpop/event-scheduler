@@ -15,9 +15,7 @@
  */
 package nl.stokpop.eventscheduler.event;
 
-import nl.stokpop.eventscheduler.api.EventSchedulerLoggerStdOut;
-import nl.stokpop.eventscheduler.api.TestContext;
-import nl.stokpop.eventscheduler.api.TestContextBuilder;
+import nl.stokpop.eventscheduler.log.EventLoggerStdOut;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -35,29 +33,24 @@ public class EventProviderTest {
     public void broadcastAbort() {
 
         Event myEvent = mock(Event.class);
-        ScheduleEvent scheduleEvent = mock(ScheduleEvent.class);
+        CustomEvent scheduleEvent = mock(CustomEvent.class);
 
         List<Event> events = new ArrayList<>();
-        // this should succeed
         events.add(myEvent);
 
-        EventProvider eventProvider = new EventProvider(events, new EventSchedulerLoggerStdOut());
+        EventBroadcaster broadcaster = new EventBroadcasterDefault(events, EventLoggerStdOut.INSTANCE);
 
-        TestContext testContext = new TestContextBuilder().build();
-        EventSchedulerProperties properties = new EventSchedulerProperties();
-        EventProperties eventProperties = properties.get(myEvent);
+        broadcaster.broadcastBeforeTest();
+        broadcaster.broadcastKeepAlive();
+        broadcaster.broadcastCustomEvent(scheduleEvent);
+        broadcaster.broadcastCheckResults();
+        broadcaster.broadcastAbortTest();
 
-        eventProvider.broadcastBeforeTest(testContext, properties);
-        eventProvider.broadcastKeepAlive(testContext, properties);
-        eventProvider.broadcastCustomEvent(testContext, properties, scheduleEvent);
-        eventProvider.broadcastCheckResults(testContext, properties);
-        eventProvider.broadcastAbortTest(testContext, properties);
-
-        verify(myEvent, times(1)).beforeTest(testContext, eventProperties);
-        verify(myEvent, times(1)).keepAlive(testContext, eventProperties);
-        verify(myEvent, times(1)).customEvent(testContext, eventProperties, scheduleEvent);
-        verify(myEvent, times(1)).checkTest(testContext, eventProperties);
-        verify(myEvent, times(1)).abortTest(testContext, eventProperties);
+        verify(myEvent, times(1)).beforeTest();
+        verify(myEvent, times(1)).keepAlive();
+        verify(myEvent, times(1)).customEvent(scheduleEvent);
+        verify(myEvent, times(1)).checkTest();
+        verify(myEvent, times(1)).abortTest();
 
     }
 
@@ -76,9 +69,9 @@ public class EventProviderTest {
         // this should succeed
         events.add(new MyTestEventThatCanFail(counter, 1, 2));
 
-        EventProvider provider = new EventProvider(events, new EventSchedulerLoggerStdOut());
+        EventBroadcaster provider = new EventBroadcasterDefault(events, EventLoggerStdOut.INSTANCE);
 
-        provider.broadcastCustomEvent(new TestContextBuilder().build(), new EventSchedulerProperties(), ScheduleEvent.createFromLine("PT1M|test-event"));
+        provider.broadcastCustomEvent(CustomEvent.createFromLine("PT1M|test-event"));
 
         assertEquals("counter should be set to 2 even though the middle event failed", 2, counter.intValue());
     }
@@ -97,7 +90,7 @@ public class EventProviderTest {
             return "MyTestEventThatCanFail";
         }
         @Override
-        public void customEvent(TestContext context, EventProperties properties, ScheduleEvent scheduleEvent) {
+        public void customEvent(CustomEvent scheduleEvent) {
             if (!counter.compareAndSet(expectValue, newValue)) throw new RuntimeException("counter was not " + expectValue);
         }
     }

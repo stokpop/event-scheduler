@@ -15,15 +15,19 @@
  */
 package nl.stokpop.eventscheduler;
 
-import nl.stokpop.eventscheduler.api.EventSchedulerLogger;
-import nl.stokpop.eventscheduler.api.EventSchedulerLoggerStdOut;
+import nl.stokpop.eventscheduler.api.EventGeneratorFactory;
+import nl.stokpop.eventscheduler.api.EventLogger;
 import nl.stokpop.eventscheduler.api.EventSchedulerSettings;
 import nl.stokpop.eventscheduler.api.TestContext;
-import nl.stokpop.eventscheduler.event.*;
+import nl.stokpop.eventscheduler.event.CustomEvent;
+import nl.stokpop.eventscheduler.event.EventBroadcaster;
+import nl.stokpop.eventscheduler.event.EventGenerator;
+import nl.stokpop.eventscheduler.event.EventSchedulerProperties;
 import nl.stokpop.eventscheduler.exception.EventSchedulerRuntimeException;
-import nl.stokpop.eventscheduler.generator.EventGeneratorDefault;
-import nl.stokpop.eventscheduler.generator.EventGeneratorProvider;
+import nl.stokpop.eventscheduler.generator.EventGeneratorFactoryDefault;
+import nl.stokpop.eventscheduler.generator.EventGeneratorFactoryProvider;
 import nl.stokpop.eventscheduler.generator.EventGeneratorProperties;
+import nl.stokpop.eventscheduler.log.EventLoggerDevNull;
 
 import java.util.HashMap;
 import java.util.List;
@@ -44,14 +48,14 @@ public class EventSchedulerBuilder {
 
     private String customEventsText = "";
 
-    private EventSchedulerLogger logger = new EventSchedulerLoggerStdOut();
+    private EventLogger logger = EventLoggerDevNull.INSTANCE;
 
     public EventSchedulerBuilder setTestContext(TestContext context) {
         this.testContext = context;
         return this;
     }
 
-    public EventSchedulerBuilder setLogger(EventSchedulerLogger logger) {
+    public EventSchedulerBuilder setLogger(EventLogger logger) {
         this.logger = logger;
         return this;
     }
@@ -96,8 +100,7 @@ public class EventSchedulerBuilder {
     /**
      * Clients can use this build method to define a different classloader.
      *
-     * By default the classloader from the current thread is used to load event providers and related resources
-     * (see .
+     * By default the classloader from the current thread is used to load event providers and related resources.
      *
      * For example in a Gradle plugin the thread classpath is limited to plugin classes,
      * and does not contain classes from the project context, such as the custom event providers used in the project.
@@ -109,8 +112,7 @@ public class EventSchedulerBuilder {
 
         // get default broadcaster if no broadcaster was given
         if (broadcaster == null) {
-            logger.info("create default event broadcaster");
-            broadcaster = EventProvider.createInstanceWithEventsFromClasspath(logger, classLoader);
+            throw new EventSchedulerRuntimeException("Broadcaster must be set, it is null.");
         }
         
         if (testContext == null) {
@@ -121,19 +123,19 @@ public class EventSchedulerBuilder {
             throw new EventSchedulerRuntimeException("EventSchedulerSettings must be set, it is null.");
         }
 
-        List<ScheduleEvent> scheduleEvents = generateEventSchedule(testContext, customEventsText, logger, classLoader);
+        List<CustomEvent> customEvents = generateCustomEventSchedule(testContext, customEventsText, logger, classLoader);
 
         return new EventScheduler(testContext, eventSchedulerSettings, assertResultsEnabled,
-                broadcaster, eventProperties, scheduleEvents, logger);
+                broadcaster, eventProperties, customEvents, logger);
     }
 
-    private List<ScheduleEvent> generateEventSchedule(TestContext context, String text, EventSchedulerLogger logger, ClassLoader classLoader) {
+    private List<CustomEvent> generateCustomEventSchedule(TestContext context, String text, EventLogger logger, ClassLoader classLoader) {
         EventGenerator eventGenerator;
         EventGeneratorProperties eventGeneratorProperties;
 
         if (text == null) {
-            eventGenerator = new EventGeneratorDefault();
             eventGeneratorProperties = new EventGeneratorProperties();
+            eventGenerator = new EventGeneratorFactoryDefault().create(testContext, eventGeneratorProperties);
         }
         else if (text.contains(GENERATOR_CLASS_META_TAG)) {
 
@@ -141,18 +143,19 @@ public class EventSchedulerBuilder {
 
             String generatorClassname = eventGeneratorProperties.getMetaProperty(GENERATOR_CLASS_META_TAG);
 
-            eventGenerator = findAndCreateEventScheduleGenerator(logger, generatorClassname, classLoader);
+            EventGeneratorFactory eventGeneratorFactory = findAndCreateEventScheduleGenerator(logger, generatorClassname, classLoader);
+            eventGenerator = eventGeneratorFactory.create(context, eventGeneratorProperties);
         }
         else {
             // assume the default input of lines of events
             Map<String, String> properties = new HashMap<>();
             properties.put("eventSchedule", text);
 
-            eventGenerator = new EventGeneratorDefault();
             eventGeneratorProperties = new EventGeneratorProperties(properties);
+            eventGenerator = new EventGeneratorFactoryDefault().create(context, eventGeneratorProperties);
         }
 
-        return eventGenerator.generate(context, eventGeneratorProperties);
+        return eventGenerator.generate();
     }
 
     /**
@@ -179,16 +182,16 @@ public class EventSchedulerBuilder {
         return this;
     }
 
-    private EventGenerator findAndCreateEventScheduleGenerator(EventSchedulerLogger logger, String generatorClassname, ClassLoader classLoader) {
-        EventGeneratorProvider provider =
-                EventGeneratorProvider.createInstanceFromClasspath(logger, classLoader);
+    private EventGeneratorFactory findAndCreateEventScheduleGenerator(EventLogger logger, String generatorFactoryClassname, ClassLoader classLoader) {
+        EventGeneratorFactoryProvider provider =
+                EventGeneratorFactoryProvider.createInstanceFromClasspath(logger, classLoader);
 
-        EventGenerator generator = provider.find(generatorClassname);
+        EventGeneratorFactory generatorFactory = provider.find(generatorFactoryClassname);
 
-        if (generator == null) {
-            throw new EventSchedulerRuntimeException("unable to find EventScheduleGenerator implementation class: " + generatorClassname);
+        if (generatorFactory == null) {
+            throw new EventSchedulerRuntimeException("unable to find EventScheduleGeneratorFactory implementation class: " + generatorFactoryClassname);
         }
-        return generator;
+        return generatorFactory;
     }
     
 }

@@ -13,20 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nl.stokpop.eventscheduler.event;
+package nl.stokpop.eventscheduler.api;
 
-public interface EventBroadcaster {
+public interface EventLogger {
 
-    void broadcastBeforeTest();
-
-    void broadcastAfterTest();
-
-    void broadcastKeepAlive();
-
-    void broadcastAbortTest();
-
-    void broadcastCustomEvent(CustomEvent event);
-
-    void broadcastCheckResults();
+    void info(String message);
+    void warn(String message);
+    void error(String message);
+    void error(String message, Throwable throwable);
+    void debug(String message);
 
 }

@@ -26,7 +26,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * Uses getClass().getCanonicalName() so inner classes will use '.' instead of '$' as name separator.
  * '$' can not be used in most situation, like in xml element name (e.g. maven pom.xml).
  *
- * Intention is to be threadsafe using ConcurrentHashMaps, not 100% sure it is.
+ * Intent is to be thread safe using ConcurrentHashMaps, not 100% sure it is.
  */
 public class EventSchedulerProperties {
 

@@ -25,7 +25,7 @@ import java.util.stream.Collectors;
 
 import static nl.stokpop.eventscheduler.EventSchedulerUtils.hasValue;
 
-public class ScheduleEvent {
+public class CustomEvent {
 
     private static final Pattern nonAlphaNumsPattern = Pattern.compile("[^A-Za-z0-9\\- %+=:]");
     
@@ -34,14 +34,14 @@ public class ScheduleEvent {
     private String description;
     private String settings;
 
-    public ScheduleEvent(Duration duration, String name, String description, String settings) {
+    public CustomEvent(Duration duration, String name, String description, String settings) {
         this.duration = duration;
         this.name = name;
         this.description = hasValue(description) ? description : name + "-" + duration.toString();
         this.settings = settings;
     }
 
-    public ScheduleEvent(Duration duration, String name, String description) {
+    public CustomEvent(Duration duration, String name, String description) {
         this(duration, name, description, null);
     }
 
@@ -79,7 +79,7 @@ public class ScheduleEvent {
      * @param line line that is separated by duration|event-name(description)|settings
      * @return new ScheduleEvent
      */
-    public static ScheduleEvent createFromLine(String line) {
+    public static CustomEvent createFromLine(String line) {
 
         if (line == null || line.trim().isEmpty()) {
             throw new ScheduleEventWrongFormat("empty line: [" + line + "]");
@@ -113,11 +113,11 @@ public class ScheduleEvent {
         }
         
         if (elements.size() == 2) {
-            return new ScheduleEvent(duration, name, description);
+            return new CustomEvent(duration, name, description);
         }
         else {
             String settings = elements.get(2);
-            return new ScheduleEvent(duration, name, description, settings);
+            return new CustomEvent(duration, name, description, settings);
         }
     }
 

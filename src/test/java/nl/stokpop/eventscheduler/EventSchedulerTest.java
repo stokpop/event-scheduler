@@ -15,26 +15,19 @@
  */
 package nl.stokpop.eventscheduler;
 
-import nl.stokpop.eventscheduler.EventScheduler;
-import nl.stokpop.eventscheduler.EventSchedulerBuilder;
-import nl.stokpop.eventscheduler.api.EventSchedulerLogger;
-import nl.stokpop.eventscheduler.api.EventSchedulerLoggerStdOut;
+import nl.stokpop.eventscheduler.api.EventLogger;
 import nl.stokpop.eventscheduler.api.EventSchedulerSettings;
 import nl.stokpop.eventscheduler.api.EventSchedulerSettingsBuilder;
 import nl.stokpop.eventscheduler.api.TestContext;
 import nl.stokpop.eventscheduler.api.TestContextBuilder;
+import nl.stokpop.eventscheduler.event.EventBroadcasterDefault;
+import nl.stokpop.eventscheduler.log.EventLoggerStdOut;
 import org.junit.Test;
 
 import java.time.Duration;
-import java.time.temporal.TemporalUnit;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Properties;
 import java.util.Collections;
-import java.util.Arrays;
+import java.util.Properties;
 
-
-import static junit.framework.TestCase.assertTrue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
@@ -46,7 +39,7 @@ public class EventSchedulerTest
     @Test
     public void create() {
 
-        EventSchedulerLogger testLogger = new EventSchedulerLoggerStdOut();
+        EventLogger testLogger = EventLoggerStdOut.INSTANCE;
 
         String eventSchedule =
                 "   \n" +
@@ -73,6 +66,9 @@ public class EventSchedulerTest
                 .setTags("")
                 .build();
 
+        EventBroadcasterDefault broadcaster =
+                new EventBroadcasterDefault(Collections.emptyList(), EventLoggerStdOut.INSTANCE);
+
         EventScheduler scheduler = new EventSchedulerBuilder()
                 .setEventSchedulerSettings(settings)
                 .setTestContext(context)
@@ -80,6 +76,7 @@ public class EventSchedulerTest
                 .addEventProperty("myClass", "name", "value")
                 .setCustomEvents(eventSchedule)
                 .setLogger(testLogger)
+                .setBroadcaster(broadcaster)
                 .build();
 
         assertNotNull(scheduler);
@@ -116,11 +113,14 @@ public class EventSchedulerTest
                 .setKeepAliveTimeInSeconds(null)
                 .build();
 
+        EventBroadcasterDefault broadcaster =
+                new EventBroadcasterDefault(null, null);
+
         new EventSchedulerBuilder()
                 .setTestContext(context)
                 .setEventSchedulerSettings(settings)
                 .setCustomEvents(null)
-                .setBroadcaster(null)
+                .setBroadcaster(broadcaster)
                 .build();
     }
 

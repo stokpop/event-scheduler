@@ -15,19 +15,18 @@
  */
 package nl.stokpop.eventscheduler;
 
-import nl.stokpop.eventscheduler.api.EventSchedulerLogger;
+import nl.stokpop.eventscheduler.api.EventLogger;
 import nl.stokpop.eventscheduler.api.EventSchedulerSettings;
 import nl.stokpop.eventscheduler.api.TestContext;
+import nl.stokpop.eventscheduler.event.CustomEvent;
 import nl.stokpop.eventscheduler.event.EventBroadcaster;
 import nl.stokpop.eventscheduler.event.EventSchedulerProperties;
-import nl.stokpop.eventscheduler.event.ScheduleEvent;
-import nl.stokpop.eventscheduler.exception.EventSchedulerException;
 
 import java.util.List;
 
 public final class EventScheduler {
 
-    private final EventSchedulerLogger logger;
+    private final EventLogger logger;
 
     private final TestContext context;
     private final EventSchedulerSettings settings;
@@ -36,7 +35,7 @@ public final class EventScheduler {
 
     private final EventBroadcaster broadcaster;
     private final EventSchedulerProperties eventProperties;
-    private final List<ScheduleEvent> scheduleEvents;
+    private final List<CustomEvent> scheduleEvents;
 
     private EventSchedulerEngine executorEngine;
 
@@ -45,7 +44,7 @@ public final class EventScheduler {
     EventScheduler(TestContext context, EventSchedulerSettings settings,
                    boolean checkResultsEnabled, EventBroadcaster broadcaster,
                    EventSchedulerProperties eventProperties,
-                   List<ScheduleEvent> scheduleEvents, EventSchedulerLogger logger) {
+                   List<CustomEvent> scheduleEvents, EventLogger logger) {
         this.context = context;
         this.settings = settings;
         this.checkResultsEnabled = checkResultsEnabled;
@@ -64,7 +63,7 @@ public final class EventScheduler {
 
         executorEngine = new EventSchedulerEngine(logger);
 
-        broadcaster.broadcastBeforeTest(context, eventProperties);
+        broadcaster.broadcastBeforeTest();
 
         executorEngine.startKeepAliveThread(context, settings, broadcaster, eventProperties);
         executorEngine.startCustomEventScheduler(context, scheduleEvents, broadcaster, eventProperties);
@@ -78,11 +77,11 @@ public final class EventScheduler {
         logger.info("Stop test session.");
         isSessionStopped = true;
 
-        broadcaster.broadcastAfterTest(context, eventProperties);
+        broadcaster.broadcastAfterTest();
 
         if (checkResultsEnabled) {
             // TODO: think about how to succeed or fail based on checks.
-            broadcaster.broadcastCheckResults(context, eventProperties);
+            broadcaster.broadcastCheckResults();
         }
 
         executorEngine.shutdownThreadsNow();
@@ -101,7 +100,7 @@ public final class EventScheduler {
         logger.warn("Test session abort called.");
         isSessionStopped = true;
 
-        broadcaster.broadcastAbortTest(context, eventProperties);
+        broadcaster.broadcastAbortTest();
 
         executorEngine.shutdownThreadsNow();
     }

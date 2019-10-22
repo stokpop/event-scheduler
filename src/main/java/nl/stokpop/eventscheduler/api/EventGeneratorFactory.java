@@ -15,12 +15,12 @@
  */
 package nl.stokpop.eventscheduler.api;
 
-public interface EventSchedulerLogger {
+import nl.stokpop.eventscheduler.event.EventGenerator;
+import nl.stokpop.eventscheduler.generator.EventGeneratorProperties;
 
-    void info(String message);
-    void warn(String message);
-    void error(String message);
-    void error(String message, Throwable throwable);
-    void debug(String message);
-
+/**
+ * Create an EventGenerator based on the given test context and properties.
+ */
+public interface EventGeneratorFactory {
+    EventGenerator create(TestContext context, EventGeneratorProperties properties);
 }

@@ -15,12 +15,12 @@
  */
 package nl.stokpop.eventscheduler;
 
-import nl.stokpop.eventscheduler.api.EventSchedulerLogger;
+import nl.stokpop.eventscheduler.api.EventLogger;
 import nl.stokpop.eventscheduler.api.EventSchedulerSettings;
 import nl.stokpop.eventscheduler.api.TestContext;
+import nl.stokpop.eventscheduler.event.CustomEvent;
 import nl.stokpop.eventscheduler.event.EventBroadcaster;
 import nl.stokpop.eventscheduler.event.EventSchedulerProperties;
-import nl.stokpop.eventscheduler.event.ScheduleEvent;
 import nl.stokpop.eventscheduler.exception.EventSchedulerRuntimeException;
 
 import java.util.List;
@@ -32,12 +32,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 class EventSchedulerEngine {
 
-    private final EventSchedulerLogger logger;
+    private final EventLogger logger;
 
     private ScheduledExecutorService executorKeepAlive;
     private ScheduledExecutorService executorCustomEvents;
 
-    EventSchedulerEngine(EventSchedulerLogger logger) {
+    EventSchedulerEngine(EventLogger logger) {
         if (logger == null) {
             throw new EventSchedulerRuntimeException("logger is null");
         }
@@ -71,8 +71,8 @@ class EventSchedulerEngine {
         }
     }
 
-    private void addToExecutor(ScheduledExecutorService executorService, TestContext context, ScheduleEvent event, EventSchedulerProperties eventProperties, EventBroadcaster broadcaster) {
-        executorService.schedule(new EventRunner(context, eventProperties, event, broadcaster), event.getDuration().getSeconds(), TimeUnit.SECONDS);
+    private void addToExecutor(ScheduledExecutorService executorService, CustomEvent event, EventBroadcaster broadcaster) {
+        executorService.schedule(new EventRunner(event, broadcaster), event.getDuration().getSeconds(), TimeUnit.SECONDS);
     }
 
     void shutdownThreadsNow() {
@@ -95,7 +95,7 @@ class EventSchedulerEngine {
         executorCustomEvents = null;
     }
 
-    void startCustomEventScheduler(TestContext context, List<ScheduleEvent> scheduleEvents, EventBroadcaster broadcaster, EventSchedulerProperties eventProperties) {
+    void startCustomEventScheduler(TestContext context, List<CustomEvent> scheduleEvents, EventBroadcaster broadcaster, EventSchedulerProperties eventProperties) {
         nullChecks(context, broadcaster, eventProperties);
 
         if (!(scheduleEvents == null || scheduleEvents.isEmpty())) {
@@ -103,14 +103,14 @@ class EventSchedulerEngine {
             logger.info(createEventScheduleMessage(scheduleEvents));
 
             executorCustomEvents = createCustomEventScheduler();
-            scheduleEvents.forEach(event -> addToExecutor(executorCustomEvents, context, event, eventProperties, broadcaster));
+            scheduleEvents.forEach(event -> addToExecutor(executorCustomEvents, event, broadcaster));
         }
         else {
             logger.info("no custom schedule events found");
         }
     }
 
-    public static String createEventScheduleMessage(List<ScheduleEvent> scheduleEvents) {
+    public static String createEventScheduleMessage(List<CustomEvent> scheduleEvents) {
         StringBuilder message = new StringBuilder();
         message.append("=== custom events schedule ===");
         scheduleEvents.forEach(event -> message
@@ -155,7 +155,7 @@ class EventSchedulerEngine {
         public void run() {
             // TODO make recurring calls also part of the generic EventGenerators
             try {
-                broadcaster.broadcastKeepAlive(context, eventProperties);
+                broadcaster.broadcastKeepAlive();
             } catch (Exception e) {
                 logger.error("Broadcast keep-alive failed", e);
             }
@@ -170,24 +170,19 @@ class EventSchedulerEngine {
 
     class EventRunner implements Runnable {
 
-        private final ScheduleEvent event;
-
-        private final TestContext context;
-        private final EventSchedulerProperties eventProperties;
+        private final CustomEvent event;
 
         private final EventBroadcaster eventBroadcaster;
 
-        public EventRunner(TestContext context, EventSchedulerProperties eventProperties, ScheduleEvent event, EventBroadcaster eventBroadcaster) {
+        public EventRunner(CustomEvent event, EventBroadcaster eventBroadcaster) {
             this.event = event;
-            this.context = context;
-            this.eventProperties = eventProperties;
             this.eventBroadcaster = eventBroadcaster;
         }
 
         @Override
         public void run() {
             try {
-                eventBroadcaster.broadcastCustomEvent(context, eventProperties, event);
+                eventBroadcaster.broadcastCustomEvent(event);
             } catch (Exception e) {
                 logger.error("Broadcast custom event failed", e);
             }
@@ -195,7 +190,7 @@ class EventSchedulerEngine {
 
         @Override
         public String toString() {
-            return String.format("EventRunner for event %s for testId %s", event, context.getTestRunId());
+            return String.format("EventRunner for event %s", event);
         }
     }
 

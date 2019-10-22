@@ -13,20 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nl.stokpop.eventscheduler.event;
+package nl.stokpop.eventscheduler.generator;
 
-public interface EventBroadcaster {
+import nl.stokpop.eventscheduler.api.EventGeneratorFactory;
+import nl.stokpop.eventscheduler.api.TestContext;
+import nl.stokpop.eventscheduler.event.EventGenerator;
 
-    void broadcastBeforeTest();
-
-    void broadcastAfterTest();
-
-    void broadcastKeepAlive();
-
-    void broadcastAbortTest();
-
-    void broadcastCustomEvent(CustomEvent event);
-
-    void broadcastCheckResults();
-
+public class EventGeneratorFactoryDefault implements EventGeneratorFactory {
+    
+    @Override
+    public EventGenerator create(TestContext context, EventGeneratorProperties properties) {
+        return new EventGeneratorDefault(context, properties);
+    }
 }
