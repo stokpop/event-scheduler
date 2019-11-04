@@ -17,14 +17,13 @@ package nl.stokpop.eventscheduler;
 
 import nl.stokpop.eventscheduler.api.TestContext;
 import nl.stokpop.eventscheduler.api.TestContextBuilder;
-import nl.stokpop.eventscheduler.event.CustomEvent;
-import nl.stokpop.eventscheduler.event.EventBroadcaster;
-import nl.stokpop.eventscheduler.event.EventGenerator;
-import nl.stokpop.eventscheduler.event.EventSchedulerProperties;
+import nl.stokpop.eventscheduler.api.CustomEvent;
+import nl.stokpop.eventscheduler.api.EventGenerator;
+import nl.stokpop.eventscheduler.api.EventProperties;
 import nl.stokpop.eventscheduler.exception.EventSchedulerRuntimeException;
 import nl.stokpop.eventscheduler.generator.EventGeneratorDefault;
 import nl.stokpop.eventscheduler.generator.EventGeneratorFactoryDefault;
-import nl.stokpop.eventscheduler.generator.EventGeneratorProperties;
+import nl.stokpop.eventscheduler.api.EventGeneratorProperties;
 import nl.stokpop.eventscheduler.log.EventLoggerStdOut;
 import org.junit.Test;
 
@@ -85,7 +84,7 @@ public class EventSchedulerEngineTest {
                 .doNothing()
                 .when(eventBroadcaster).broadcastCustomEvent(any());
 
-        EventSchedulerProperties eventProperties = new EventSchedulerProperties();
+        EventProperties eventProperties = new EventProperties();
         engine.startCustomEventScheduler(context, events, eventBroadcaster, eventProperties);
 
         // check if all events are called at 100, 200, 300, 400 and 500 ms

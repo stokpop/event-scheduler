@@ -15,9 +15,10 @@
  */
 package nl.stokpop.eventscheduler.generator;
 
+import nl.stokpop.eventscheduler.api.EventGeneratorProperties;
 import nl.stokpop.eventscheduler.api.TestContext;
-import nl.stokpop.eventscheduler.event.CustomEvent;
-import nl.stokpop.eventscheduler.event.EventGenerator;
+import nl.stokpop.eventscheduler.api.CustomEvent;
+import nl.stokpop.eventscheduler.api.EventGenerator;
 import nl.stokpop.eventscheduler.exception.EventSchedulerRuntimeException;
 
 import java.io.BufferedReader;

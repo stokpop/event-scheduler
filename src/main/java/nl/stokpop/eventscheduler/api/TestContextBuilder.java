@@ -15,6 +15,7 @@
  */
 package nl.stokpop.eventscheduler.api;
 
+import net.jcip.annotations.NotThreadSafe;
 import nl.stokpop.eventscheduler.EventSchedulerUtils;
 
 import java.time.Duration;
@@ -23,6 +24,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@NotThreadSafe
 public class TestContextBuilder {
     private static final int DEFAULT_RAMPUP_TIME_SECONDS = 0;
     private static final int DEFAULT_CONSTANT_LOAD_TIME_SECONDS = 600;

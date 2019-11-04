@@ -13,20 +13,42 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nl.stokpop.eventscheduler.event;
+package nl.stokpop.eventscheduler.api;
+
+import jdk.nashorn.internal.ir.annotations.Immutable;
+import nl.stokpop.eventscheduler.exception.EventSchedulerRuntimeException;
 
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Properties;
+import java.util.stream.Collectors;
 
 /**
+ * The EventProperties is a list of properties to be used by the Event.
+ *
+ * One required property is the eventFactory property that should contain the fully qualified
+ * class name of the factory class for the event.
+ *
  * This is an immutable class and makes an unmodifiable copy of the given Map.
  */
+@Immutable
 public class EventProperties {
+    public static final String FACTORY_CLASSNAME_KEY = "eventFactory";
+
     private Map<String, String> properties;
+
+    public EventProperties(Properties properties) {
+        // note: null cannot be added to Properties, so check is not needed
+        this(properties.entrySet().stream().collect(Collectors.toMap(x -> x.getKey().toString(), x -> x.getValue().toString())));
+    }
 
     public EventProperties(Map<String,String> props) {
         properties = Collections.unmodifiableMap(new HashMap<>(props));
+        if (!properties.containsKey(FACTORY_CLASSNAME_KEY)) {
+            throw new EventSchedulerRuntimeException("The " + FACTORY_CLASSNAME_KEY + " property is missing, add it with value the fully" +
+                    " qualified class name of the factory for the events.");
+        }
     }
 
     public EventProperties() {
@@ -39,6 +61,10 @@ public class EventProperties {
 
     public String getPropertyOrDefault(String name, String defaultValue) {
         return properties.getOrDefault(name, defaultValue);
+    }
+
+    public String getFactoryClassName() {
+        return properties.get(FACTORY_CLASSNAME_KEY);
     }
 
     public boolean isEmpty() {

@@ -15,31 +15,44 @@
  */
 package nl.stokpop.eventscheduler;
 
-import nl.stokpop.eventscheduler.api.EventLogger;
-import nl.stokpop.eventscheduler.api.EventSchedulerSettings;
-import nl.stokpop.eventscheduler.api.EventSchedulerSettingsBuilder;
-import nl.stokpop.eventscheduler.api.TestContext;
-import nl.stokpop.eventscheduler.api.TestContextBuilder;
-import nl.stokpop.eventscheduler.event.EventBroadcasterDefault;
+import nl.stokpop.eventscheduler.api.*;
+import nl.stokpop.eventscheduler.event.EventFactoryProvider;
+import nl.stokpop.eventscheduler.exception.EventCheckFailureException;
 import nl.stokpop.eventscheduler.log.EventLoggerStdOut;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import java.time.Duration;
 import java.util.Collections;
+import java.util.Optional;
 import java.util.Properties;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
 /**
- * This test class is in another package to check access package private fields.
+ * This test class is in same package to use the setEventFactoryProvider call.
  */
 public class EventSchedulerTest
 {
+
     @Test
-    public void create() {
+    public void createEventSchedulerAndFireSomeEventsWithFailures() {
 
         EventLogger testLogger = EventLoggerStdOut.INSTANCE;
+
+        EventFactoryProvider provider = Mockito.mock(EventFactoryProvider.class);
+        // to simulate event failures
+        Event event = Mockito.mock(Event.class);
+        EventFactory eventFactory = Mockito.mock(EventFactory.class);
+
+        Mockito.when(eventFactory.create(any(), any(), any())).thenReturn(event);
+        Mockito.when(provider.factoryByClassName(any())).thenReturn(Optional.of(eventFactory));
+        EventCheck eventOne = new EventCheck("eventOne", "nl.stokpop.MockEvent", EventStatus.FAILURE, "This event failed!");
+        EventCheck eventTwo = new EventCheck("eventTwo", "nl.stokpop.MockEvent", EventStatus.SUCCESS, "This event was ok!");
+        EventCheck eventThree = new EventCheck("eventThree", "nl.stokpop.MockEvent", EventStatus.FAILURE, "This event failed also!");
+        Mockito.when(event.check()).thenReturn(eventOne).thenReturn(eventTwo).thenReturn(eventThree);
 
         String eventSchedule =
                 "   \n" +
@@ -63,27 +76,53 @@ public class EventSchedulerTest
                 .setConstantLoadTimeInSeconds("300")
                 .setAnnotations("annotation")
                 .setVariables(Collections.emptyMap())
-                .setTags("")
+                .setTags("tag1,tag2")
                 .build();
 
-        EventBroadcasterDefault broadcaster =
-                new EventBroadcasterDefault(Collections.emptyList(), EventLoggerStdOut.INSTANCE);
+        Properties properties = new Properties();
+        properties.put("name", "value");
+        properties.put(EventProperties.FACTORY_CLASSNAME_KEY, "nl.stokpop.eventscheduler.event.EventFactoryDefault");
 
         EventScheduler scheduler = new EventSchedulerBuilder()
                 .setEventSchedulerSettings(settings)
                 .setTestContext(context)
                 .setAssertResultsEnabled(true)
-                .addEventProperty("myClass", "name", "value")
+                .addEvent("myEvent1", properties)
+                .addEvent("myEvent2", properties)
+                .addEvent("myEvent3", properties)
                 .setCustomEvents(eventSchedule)
                 .setLogger(testLogger)
-                .setBroadcaster(broadcaster)
+                .setEventFactoryProvider(provider)
                 .build();
 
         assertNotNull(scheduler);
         assertEquals(120, settings.getKeepAliveDuration().getSeconds());
 
-//        scheduler.startSession();
-//        scheduler.stopSession();
+        scheduler.startSession();
+        scheduler.stopSession();
+
+        // this exception is expected to be thrown because two events have reported failures
+        String failureMessage = null;
+        try {
+            scheduler.checkResults();
+        } catch (EventCheckFailureException e) {
+            failureMessage = e.getMessage();
+        }
+
+        assertNotNull("Exception message expected!", failureMessage);
+        assertTrue("Should contain the failed event ids.", failureMessage.contains(eventOne.getEventId()) && failureMessage.contains(eventThree.getEventId()));
+        assertFalse("Should not contain the success event ids.", failureMessage.contains(eventTwo.getEventId()));
+
+        // note these are called via the lambda catch exception handler via the default broadcaster
+        Mockito.verify(event, times(3)).beforeTest();
+        Mockito.verify(event, times(3)).afterTest();
+        // this seems a timing issue if they are called or not, they are called in ide test, not in gradle test all
+        Mockito.verify(event, atMost(3)).keepAlive();
+
+        verifyNoMoreInteractions(ignoreStubs(provider));
+        verifyNoMoreInteractions(ignoreStubs(event));
+        verifyNoMoreInteractions(ignoreStubs(eventFactory));
+
     }
 
     /**
@@ -113,14 +152,10 @@ public class EventSchedulerTest
                 .setKeepAliveTimeInSeconds(null)
                 .build();
 
-        EventBroadcasterDefault broadcaster =
-                new EventBroadcasterDefault(null, null);
-
         new EventSchedulerBuilder()
                 .setTestContext(context)
                 .setEventSchedulerSettings(settings)
                 .setCustomEvents(null)
-                .setBroadcaster(broadcaster)
                 .build();
     }
 

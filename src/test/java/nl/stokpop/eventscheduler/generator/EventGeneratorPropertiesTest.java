@@ -15,6 +15,7 @@
  */
 package nl.stokpop.eventscheduler.generator;
 
+import nl.stokpop.eventscheduler.api.EventGeneratorProperties;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;

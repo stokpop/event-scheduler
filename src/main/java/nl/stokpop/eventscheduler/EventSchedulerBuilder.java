@@ -15,27 +15,28 @@
  */
 package nl.stokpop.eventscheduler;
 
-import nl.stokpop.eventscheduler.api.EventGeneratorFactory;
-import nl.stokpop.eventscheduler.api.EventLogger;
-import nl.stokpop.eventscheduler.api.EventSchedulerSettings;
-import nl.stokpop.eventscheduler.api.TestContext;
-import nl.stokpop.eventscheduler.event.CustomEvent;
-import nl.stokpop.eventscheduler.event.EventBroadcaster;
-import nl.stokpop.eventscheduler.event.EventGenerator;
-import nl.stokpop.eventscheduler.event.EventSchedulerProperties;
+import jdk.nashorn.internal.ir.annotations.Immutable;
+import net.jcip.annotations.NotThreadSafe;
+import nl.stokpop.eventscheduler.api.*;
+import nl.stokpop.eventscheduler.event.*;
 import nl.stokpop.eventscheduler.exception.EventSchedulerRuntimeException;
 import nl.stokpop.eventscheduler.generator.EventGeneratorFactoryDefault;
 import nl.stokpop.eventscheduler.generator.EventGeneratorFactoryProvider;
-import nl.stokpop.eventscheduler.generator.EventGeneratorProperties;
+import nl.stokpop.eventscheduler.api.EventGeneratorProperties;
 import nl.stokpop.eventscheduler.log.EventLoggerDevNull;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
+/**
+ * Builder: intended to be used in one thread for construction and then to be discarded.
+ */
+@NotThreadSafe
 public class EventSchedulerBuilder {
 
     private static final String GENERATOR_CLASS_META_TAG = "@generator-class";
+
+    private final Set<EventInfo> eventInfos = new HashSet<>();
 
     private TestContext testContext;
 
@@ -43,12 +44,15 @@ public class EventSchedulerBuilder {
 
     private boolean assertResultsEnabled = false;
 
-    private EventBroadcaster broadcaster;
-    private EventSchedulerProperties eventProperties = new EventSchedulerProperties();
+    private EventProperties eventProperties = new EventProperties();
 
     private String customEventsText = "";
 
     private EventLogger logger = EventLoggerDevNull.INSTANCE;
+
+    private EventFactoryProvider eventFactoryProvider;
+
+    private EventBroadcaster eventBroadcaster;
 
     public EventSchedulerBuilder setTestContext(TestContext context) {
         this.testContext = context;
@@ -70,29 +74,6 @@ public class EventSchedulerBuilder {
         return this;
     }
 
-    public EventSchedulerBuilder setBroadcaster(EventBroadcaster broadcaster) {
-        this.broadcaster = broadcaster;
-        return this;
-    }
-    
-    /**
-     * Add properties to be passed on to the event implementation class.
-     * @param eventImplementationName the fully qualified implementation class name (class.getName())
-     * @param name the name of the property (not null or empty), e.g. "REST_URL"
-     * @param value the name of the property (can be null or empty), e.g. "https://my-rest-call"
-     * @return this
-     */
-    public EventSchedulerBuilder addEventProperty(String eventImplementationName, String name, String value) {
-        if (eventImplementationName == null || eventImplementationName.isEmpty()) {
-            throw new EventSchedulerRuntimeException("EventImplementationName is null or empty for " + this);
-        }
-        if (name == null || name.isEmpty()) {
-            throw new EventSchedulerRuntimeException("EventImplementation property name is null or empty for " + this);
-        }
-        eventProperties.put(eventImplementationName, name, value);
-        return this;
-    }
-
     public EventScheduler build() {
         return build(null);
     }
@@ -109,11 +90,6 @@ public class EventSchedulerBuilder {
      * @return a new EventScheduler
      */
     public EventScheduler build(ClassLoader classLoader) {
-
-        // get default broadcaster if no broadcaster was given
-        if (broadcaster == null) {
-            throw new EventSchedulerRuntimeException("Broadcaster must be set, it is null.");
-        }
         
         if (testContext == null) {
             throw new EventSchedulerRuntimeException("TestContext must be set, it is null.");
@@ -125,8 +101,27 @@ public class EventSchedulerBuilder {
 
         List<CustomEvent> customEvents = generateCustomEventSchedule(testContext, customEventsText, logger, classLoader);
 
+        EventFactoryProvider provider = eventFactoryProvider == null
+                ? EventFactoryProvider.createInstanceFromClasspath(classLoader)
+                : eventFactoryProvider;
+
+        List<Event> events = eventInfos.stream().map(p -> createEvent(provider, p, testContext)).collect(Collectors.toList());
+
+        EventBroadcaster broadcaster = eventBroadcaster == null
+                ? new EventBroadcasterDefault(events, logger)
+                : eventBroadcaster;
+
         return new EventScheduler(testContext, eventSchedulerSettings, assertResultsEnabled,
                 broadcaster, eventProperties, customEvents, logger);
+    }
+
+    private Event createEvent(EventFactoryProvider provider, EventInfo eventInfo, TestContext testContext) {
+        String factoryClassName = eventInfo.getEventProperties().getFactoryClassName();
+        String eventName = eventInfo.getEventName();
+
+        return provider.factoryByClassName(factoryClassName)
+                .orElseThrow(() -> new RuntimeException(factoryClassName + " not found on classpath"))
+                .create(eventName, testContext, eventInfo.getEventProperties());
     }
 
     private List<CustomEvent> generateCustomEventSchedule(TestContext context, String text, EventLogger logger, ClassLoader classLoader) {
@@ -193,5 +188,86 @@ public class EventSchedulerBuilder {
         }
         return generatorFactory;
     }
-    
+
+    public EventSchedulerBuilder addEvent(String eventName, Map<String, String> properties) {
+        addEvent(eventName, new EventProperties(properties));
+        return this;
+    }
+
+    public EventSchedulerBuilder addEvent(String eventName, Properties properties) {
+        addEvent(eventName, new EventProperties(properties));
+        return this;
+    }
+
+    public EventSchedulerBuilder addEvent(String eventName, EventProperties properties) {
+        EventInfo eventInfo = new EventInfo(eventName, properties);
+        boolean unique = eventInfos.add(eventInfo);
+        if (!unique) {
+            throw new EventSchedulerRuntimeException("Event name is not unique: " + eventInfo);
+        }
+        return this;
+    }
+
+    /**
+     * Optional. Default is probably good.
+     * @param eventFactoryProvider The event factory provider to use.
+     */
+    EventSchedulerBuilder setEventFactoryProvider(EventFactoryProvider eventFactoryProvider) {
+        this.eventFactoryProvider = eventFactoryProvider;
+        return this;
+    }
+
+    /**
+     * Optional. Default is probably good.
+     * @param eventBroadcaster the broadcaster implementation to use
+     */
+    EventSchedulerBuilder setEventBroadcaster(EventBroadcaster eventBroadcaster) {
+        this.eventBroadcaster = eventBroadcaster;
+        return this;
+    }
+
+    /**
+     * Event name should be unique: it is used in logging and as lookup key.
+     *
+     * An event info is considered equal when eventName is the same.
+     */
+    @Immutable
+    private static final class EventInfo {
+        private String eventName;
+        private EventProperties eventProperties;
+
+        public EventInfo(String eventName, EventProperties eventProperties) {
+            this.eventName = eventName;
+            this.eventProperties = eventProperties;
+        }
+
+        public String getEventName() {
+            return eventName;
+        }
+
+        public EventProperties getEventProperties() {
+            return eventProperties;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            EventInfo eventInfo = (EventInfo) o;
+            return Objects.equals(eventName, eventInfo.eventName);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(eventName);
+        }
+
+        @Override
+        public String toString() {
+            return "EventInfo{" +
+                    "eventName='" + eventName + '\'' +
+                    ", eventProperties=" + eventProperties +
+                    '}';
+        }
+    }
 }

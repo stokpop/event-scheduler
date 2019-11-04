@@ -13,17 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nl.stokpop.eventscheduler.generator;
+package nl.stokpop.eventscheduler.exception;
 
-import nl.stokpop.eventscheduler.api.EventGeneratorFactory;
-import nl.stokpop.eventscheduler.api.EventGeneratorProperties;
-import nl.stokpop.eventscheduler.api.TestContext;
-import nl.stokpop.eventscheduler.api.EventGenerator;
+public class EventCheckFailureException extends EventSchedulerRuntimeException {
 
-public class EventGeneratorFactoryDefault implements EventGeneratorFactory {
-    
-    @Override
-    public EventGenerator create(TestContext context, EventGeneratorProperties properties) {
-        return new EventGeneratorDefault(context, properties);
+    public EventCheckFailureException(final String message) {
+        super(message);
     }
+
 }

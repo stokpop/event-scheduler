@@ -18,9 +18,8 @@ package nl.stokpop.eventscheduler;
 import nl.stokpop.eventscheduler.api.EventLogger;
 import nl.stokpop.eventscheduler.api.EventSchedulerSettings;
 import nl.stokpop.eventscheduler.api.TestContext;
-import nl.stokpop.eventscheduler.event.CustomEvent;
-import nl.stokpop.eventscheduler.event.EventBroadcaster;
-import nl.stokpop.eventscheduler.event.EventSchedulerProperties;
+import nl.stokpop.eventscheduler.api.CustomEvent;
+import nl.stokpop.eventscheduler.api.EventProperties;
 import nl.stokpop.eventscheduler.exception.EventSchedulerRuntimeException;
 
 import java.util.List;
@@ -44,7 +43,7 @@ class EventSchedulerEngine {
         this.logger = logger;
     }
 
-    void startKeepAliveThread(TestContext context, EventSchedulerSettings settings, EventBroadcaster broadcaster, EventSchedulerProperties eventProperties) {
+    void startKeepAliveThread(TestContext context, EventSchedulerSettings settings, EventBroadcaster broadcaster, EventProperties eventProperties) {
         nullChecks(context, broadcaster, eventProperties);
 
         if (executorKeepAlive != null) {
@@ -59,7 +58,7 @@ class EventSchedulerEngine {
         executorKeepAlive.scheduleAtFixedRate(keepAliveRunner, 0, settings.getKeepAliveDuration().getSeconds(), TimeUnit.SECONDS);
     }
 
-    private void nullChecks(TestContext context, EventBroadcaster broadcaster, EventSchedulerProperties eventProperties) {
+    private void nullChecks(TestContext context, EventBroadcaster broadcaster, EventProperties eventProperties) {
         if (context == null) {
             throw new NullPointerException("TestContext cannot be null");
         }
@@ -67,7 +66,7 @@ class EventSchedulerEngine {
             throw new NullPointerException("EventBroadcaster cannot be null");
         }
         if (eventProperties == null) {
-            throw new NullPointerException("EventSchedulerProperties cannot be null");
+            throw new NullPointerException("EventProperties cannot be null");
         }
     }
 
@@ -95,7 +94,7 @@ class EventSchedulerEngine {
         executorCustomEvents = null;
     }
 
-    void startCustomEventScheduler(TestContext context, List<CustomEvent> scheduleEvents, EventBroadcaster broadcaster, EventSchedulerProperties eventProperties) {
+    void startCustomEventScheduler(TestContext context, List<CustomEvent> scheduleEvents, EventBroadcaster broadcaster, EventProperties eventProperties) {
         nullChecks(context, broadcaster, eventProperties);
 
         if (!(scheduleEvents == null || scheduleEvents.isEmpty())) {
@@ -143,9 +142,9 @@ class EventSchedulerEngine {
 
         private final TestContext context;
         private final EventBroadcaster broadcaster;
-        private final EventSchedulerProperties eventProperties;
+        private final EventProperties eventProperties;
 
-        KeepAliveRunner(TestContext context, EventBroadcaster broadcaster, EventSchedulerProperties eventProperties) {
+        KeepAliveRunner(TestContext context, EventBroadcaster broadcaster, EventProperties eventProperties) {
             this.context = context;
             this.broadcaster = broadcaster;
             this.eventProperties = eventProperties;

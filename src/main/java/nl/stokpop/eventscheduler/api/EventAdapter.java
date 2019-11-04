@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nl.stokpop.eventscheduler.event;
+package nl.stokpop.eventscheduler.api;
 
 /**
  * Adapter class with empty method implementations of the Event interface.
@@ -44,8 +44,8 @@ public abstract class EventAdapter implements Event {
     }
 
     @Override
-    public void checkTest() {
-
+    public EventCheck check() {
+        return EventCheck.DEFAULT;
     }
 
     @Override

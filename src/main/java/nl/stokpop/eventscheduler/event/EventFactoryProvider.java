@@ -16,29 +16,25 @@
 package nl.stokpop.eventscheduler.event;
 
 import nl.stokpop.eventscheduler.api.EventFactory;
-import nl.stokpop.eventscheduler.api.EventLogger;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.ServiceLoader;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class EventFactoryProvider {
 
-    private final EventLogger logger;
+    private final Map<String, EventFactory> eventFactories;
 
-    private final List<EventFactory> eventFactories;
-
-    EventFactoryProvider(List<EventFactory> eventFactories, EventLogger logger) {
-        this.eventFactories = Collections.unmodifiableList(new ArrayList<>(eventFactories));
-        this.logger = logger;
+    private EventFactoryProvider(List<EventFactory> eventFactories) {
+        Map<String, EventFactory> map = eventFactories.stream()
+                .collect(Collectors.toMap(f -> f.getClass().getName(), f -> f));
+        this.eventFactories = Collections.unmodifiableMap(map);
     }
 
-    public static EventFactoryProvider createInstanceWithEventsFromClasspath(EventLogger logger) {
-        return createInstanceWithEventsFromClasspath(logger, null);
+    public static EventFactoryProvider createInstanceFromClasspath() {
+        return createInstanceFromClasspath(null);
     }
 
-    public static EventFactoryProvider createInstanceWithEventsFromClasspath(EventLogger logger, ClassLoader classLoader) {
+    public static EventFactoryProvider createInstanceFromClasspath(ClassLoader classLoader) {
         ServiceLoader<EventFactory> eventFactoryLoader = classLoader == null
                 ? ServiceLoader.load(EventFactory.class)
                 : ServiceLoader.load(EventFactory.class, classLoader);
@@ -47,7 +43,17 @@ public class EventFactoryProvider {
         for (EventFactory eventFactory : eventFactoryLoader) {
             eventFactories.add(eventFactory);
         }
-        return new EventFactoryProvider(eventFactories, logger);
+        return new EventFactoryProvider(eventFactories);
+    }
+
+    /**
+     * Find factory by given class name.
+     *
+     * @param className the full class name of the factory
+     * @return an optional which is empty if the factory for given class name is not present
+     */
+    public Optional<EventFactory> factoryByClassName(String className) {
+        return Optional.ofNullable(eventFactories.get(className));
     }
 
 }

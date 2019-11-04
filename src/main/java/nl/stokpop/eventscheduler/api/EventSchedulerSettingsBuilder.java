@@ -15,10 +15,12 @@
  */
 package nl.stokpop.eventscheduler.api;
 
+import net.jcip.annotations.NotThreadSafe;
 import nl.stokpop.eventscheduler.EventSchedulerUtils;
 
 import java.time.Duration;
 
+@NotThreadSafe
 public class EventSchedulerSettingsBuilder {
 
     private static final int DEFAULT_KEEP_ALIVE_TIME_SECONDS = 30;

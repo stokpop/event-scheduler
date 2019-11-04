@@ -15,9 +15,6 @@
  */
 package nl.stokpop.eventscheduler.api;
 
-import nl.stokpop.eventscheduler.event.EventGenerator;
-import nl.stokpop.eventscheduler.generator.EventGeneratorProperties;
-
 /**
  * Create an EventGenerator based on the given test context and properties.
  */

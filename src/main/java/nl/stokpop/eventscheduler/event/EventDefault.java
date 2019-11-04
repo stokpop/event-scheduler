@@ -1,15 +1,17 @@
 package nl.stokpop.eventscheduler.event;
 
-import nl.stokpop.eventscheduler.api.EventLogger;
-import nl.stokpop.eventscheduler.api.TestContext;
+import nl.stokpop.eventscheduler.api.EventCheck;
+import nl.stokpop.eventscheduler.api.*;
 
 public class EventDefault implements Event {
 
     private final EventProperties eventProperties;
     private final TestContext testContext;
     private final EventLogger logger;
+    private final String eventName;
 
-    EventDefault(TestContext testContext, EventProperties eventProperties, EventLogger logger) {
+    EventDefault(String eventName, TestContext testContext, EventProperties eventProperties, EventLogger logger) {
+        this.eventName = eventName;
         this.testContext = testContext;
         this.eventProperties = eventProperties;
         this.logger = logger;
@@ -17,7 +19,7 @@ public class EventDefault implements Event {
 
     @Override
     public String getName() {
-        return "DefaultEvent";
+        return eventName;
     }
 
     @Override
@@ -41,8 +43,8 @@ public class EventDefault implements Event {
     }
 
     @Override
-    public void checkTest() {
-
+    public EventCheck check() {
+        return EventCheck.DEFAULT;
     }
 
     @Override

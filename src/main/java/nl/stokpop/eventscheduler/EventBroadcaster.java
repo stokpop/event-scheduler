@@ -13,7 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nl.stokpop.eventscheduler.event;
+package nl.stokpop.eventscheduler;
+
+import nl.stokpop.eventscheduler.api.CustomEvent;
+import nl.stokpop.eventscheduler.api.EventCheck;
+
+import java.util.List;
 
 public interface EventBroadcaster {
 
@@ -27,6 +32,6 @@ public interface EventBroadcaster {
 
     void broadcastCustomEvent(CustomEvent event);
 
-    void broadcastCheckResults();
+    List<EventCheck> broadcastCheck();
 
 }

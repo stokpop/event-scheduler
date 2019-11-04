@@ -15,14 +15,11 @@
  */
 package nl.stokpop.eventscheduler;
 
-import nl.stokpop.eventscheduler.api.EventLogger;
-import nl.stokpop.eventscheduler.api.EventSchedulerSettings;
-import nl.stokpop.eventscheduler.api.TestContext;
-import nl.stokpop.eventscheduler.event.CustomEvent;
-import nl.stokpop.eventscheduler.event.EventBroadcaster;
-import nl.stokpop.eventscheduler.event.EventSchedulerProperties;
+import nl.stokpop.eventscheduler.api.*;
+import nl.stokpop.eventscheduler.exception.EventCheckFailureException;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 public final class EventScheduler {
 
@@ -34,7 +31,7 @@ public final class EventScheduler {
     private final boolean checkResultsEnabled;
 
     private final EventBroadcaster broadcaster;
-    private final EventSchedulerProperties eventProperties;
+    private final EventProperties eventProperties;
     private final List<CustomEvent> scheduleEvents;
 
     private EventSchedulerEngine executorEngine;
@@ -43,7 +40,7 @@ public final class EventScheduler {
 
     EventScheduler(TestContext context, EventSchedulerSettings settings,
                    boolean checkResultsEnabled, EventBroadcaster broadcaster,
-                   EventSchedulerProperties eventProperties,
+                   EventProperties eventProperties,
                    List<CustomEvent> scheduleEvents, EventLogger logger) {
         this.context = context;
         this.settings = settings;
@@ -79,11 +76,6 @@ public final class EventScheduler {
 
         broadcaster.broadcastAfterTest();
 
-        if (checkResultsEnabled) {
-            // TODO: think about how to succeed or fail based on checks.
-            broadcaster.broadcastCheckResults();
-        }
-
         executorEngine.shutdownThreadsNow();
 
         logger.info("All broadcasts for stop test session are done");
@@ -103,6 +95,26 @@ public final class EventScheduler {
         broadcaster.broadcastAbortTest();
 
         executorEngine.shutdownThreadsNow();
+    }
+
+    /**
+     * Call to check results of this test run. Catch the exception to do something useful.
+     * @throws EventCheckFailureException when there are events that report failures
+     */
+    public void checkResults() throws EventCheckFailureException {
+        logger.info("Test session abort called.");
+
+        List<EventCheck> eventChecks = broadcaster.broadcastCheck();
+
+        boolean success = eventChecks.stream().allMatch(e -> e.getEventStatus() != EventStatus.FAILURE);
+
+        if (!success) {
+            String failureMessage = eventChecks.stream()
+                    .filter(e -> e.getEventStatus() == EventStatus.FAILURE)
+                    .map(e -> String.format("eventId: '%s' message: '%s'", e.getEventId(), e.getMessage()))
+                    .collect(Collectors.joining(", "));
+            throw new EventCheckFailureException(String.format("Event checks with failures found: [%s]", failureMessage));
+        }
     }
 
     @Override

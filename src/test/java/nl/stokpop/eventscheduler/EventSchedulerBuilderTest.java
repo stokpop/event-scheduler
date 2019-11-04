@@ -15,14 +15,13 @@
  */
 package nl.stokpop.eventscheduler;
 
-import nl.stokpop.eventscheduler.api.EventSchedulerSettingsBuilder;
-import nl.stokpop.eventscheduler.api.TestContextBuilder;
-import nl.stokpop.eventscheduler.event.EventBroadcasterDefault;
+import nl.stokpop.eventscheduler.api.*;
+import nl.stokpop.eventscheduler.exception.EventSchedulerRuntimeException;
 import org.junit.Test;
 
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.util.Collections;
+import java.util.*;
 
 public class EventSchedulerBuilderTest {
 
@@ -34,8 +33,7 @@ public class EventSchedulerBuilderTest {
          EventSchedulerBuilder eventSchedulerBuilder = new EventSchedulerBuilder()
                  .setCustomEvents(alternativeClassCustomEvents)
                  .setTestContext(new TestContextBuilder().build())
-                 .setEventSchedulerSettings(new EventSchedulerSettingsBuilder().build())
-                 .setBroadcaster(new EventBroadcasterDefault(Collections.emptyList()));
+                 .setEventSchedulerSettings(new EventSchedulerSettingsBuilder().build());
 
         ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
         EventScheduler eventScheduler =
@@ -43,6 +41,67 @@ public class EventSchedulerBuilderTest {
 
         // TODO what to assert?
 
+    }
+
+    /**
+     * Example pom input:
+     * <pre>
+     * {@code
+     * <nl.stokpop.event.wiremock.WiremockEventFactory>
+     * 	<wiremockEnabled>true</wiremockEnabled>
+     * 	<wiremockFilesDir>src/test/resources/wiremock</wiremockFilesDir>
+     * 	<wiremockUrl>https://site.a/</wiremockUrl>
+     * </nl.stokpop.event.wiremock.WiremockEventFactory>
+     *
+     * <nl.stokpop.event.wiremock.WiremockEventFactory>
+     * 	<wiremockEnabled>true</wiremockEnabled>
+     * 	<wiremockFilesDir>src/test/resources/wiremock</wiremockFilesDir>
+     * 	<wiremockUrl>https://site.b/</wiremockUrl>
+     * </nl.stokpop.event.wiremock.WiremockEventFactory>
+     * }
+     * </pre>
+     *
+     */
+    @Test
+    public void testFactoriesAndBroadcaster() {
+        EventSchedulerBuilder builder = new EventSchedulerBuilder();
+
+        TestContext testContext = new TestContextBuilder().build();
+
+        EventSchedulerSettingsBuilder eventSchedulerSettingsBuilder = new EventSchedulerSettingsBuilder();
+        EventSchedulerSettings eventSchedulerSettings = eventSchedulerSettingsBuilder.build();
+
+        builder.setTestContext(testContext);
+        builder.setEventSchedulerSettings(eventSchedulerSettings);
+
+        String factoryClassName = "nl.stokpop.eventscheduler.event.EventFactoryDefault";
+
+        Map<String, String> properties = new HashMap<>();
+        properties.put("eventFactory", factoryClassName);
+        properties.put("wiremockEnabled", "true");
+        properties.put("wiremockFilesDir", "src/test/resources/wiremock");
+        properties.put("wiremockUrl", "https://site.a/");
+
+        builder.addEvent("Event1", properties);
+
+        Map<String, String> properties2 = new HashMap<>();
+        properties2.put("eventFactory", factoryClassName);
+        properties2.put("wiremockEnabled", "true");
+        properties2.put("wiremockFilesDir", "src/test/resources/wiremock");
+        properties2.put("wiremockUrl", "https://site.b/");
+
+        builder.addEvent("Event2", properties);
+
+        EventScheduler eventScheduler = builder.build();
+
+        eventScheduler.startSession();
+    }
+
+    @Test(expected = EventSchedulerRuntimeException.class)
+    public void testUniqueEventNameCheck() {
+        EventSchedulerBuilder builder = new EventSchedulerBuilder();
+        builder.addEvent("one", Collections.emptyMap());
+        builder.addEvent("one", Collections.emptyMap());
     }
 
 }

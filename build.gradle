@@ -42,7 +42,7 @@ tasks.withType(JavaCompile) {
 }
 
 license {
-    // check is broken on windows, 
+    // license check is broken on windows, skip
     if (OperatingSystem.current().isWindows()) ignoreFailures = true
     header = file("src/main/resources/META-INF/LICENSE.txt")
     ext.year = Calendar.getInstance().get(Calendar.YEAR)

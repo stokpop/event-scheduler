@@ -1,20 +1,21 @@
-package nl.stokpop.eventscheduler.event;
+package nl.stokpop.eventscheduler;
 
+import nl.stokpop.eventscheduler.api.EventCheck;
 import nl.stokpop.eventscheduler.api.EventLogger;
+import nl.stokpop.eventscheduler.api.CustomEvent;
+import nl.stokpop.eventscheduler.api.Event;
 import nl.stokpop.eventscheduler.log.EventLoggerDevNull;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 public class EventBroadcasterDefault implements EventBroadcaster {
 
     private final List<Event> events;
     private final EventLogger logger;
 
-    public EventBroadcasterDefault(Collection<Event> events, EventLogger logger) {
+    EventBroadcasterDefault(Collection<Event> events, EventLogger logger) {
         this.events = events == null ? Collections.emptyList() : Collections.unmodifiableList(new ArrayList<>(events));
         this.logger = logger == null ? EventLoggerDevNull.INSTANCE : logger;
     }
@@ -54,9 +55,9 @@ public class EventBroadcasterDefault implements EventBroadcaster {
     }
 
     @Override
-    public void broadcastCheckResults() {
+    public List<EventCheck> broadcastCheck() {
         logger.info("broadcast check test");
-        events.forEach(catchExceptionWrapper(Event::checkTest));
+        return events.stream().map(Event::check).collect(Collectors.toList());
     }
 
     /**
@@ -72,7 +73,7 @@ public class EventBroadcasterDefault implements EventBroadcaster {
                     logger.error(message, e);
                 }
                 else {
-                    System.out.println("(note: better provide a logger): " + message);
+                    System.err.printf("(note: better provide a logger): %s %s", message, e.getMessage());
                 }
             }
         };

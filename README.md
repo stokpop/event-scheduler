@@ -136,10 +136,11 @@ For example:
             PT15M|scale-up|{ replicas:2 }
         </eventScheduleScript>
         <eventProperties>
-            <nl.stokpop.event.StokpopHelloEvent>
+            <StokpopHelloEvent1>
+                <eventFactory>nl.stokpop.event.StokpopHelloEvent</eventFactory>
                 <myRestServer>https://my-rest-api</myName>
                 <myCredentials>${ENV.SECRET}</myCredentials>
-            </nl.stokpop.event.StokpopHelloEvent>
+            </StokpopHelloEvent1>
         </eventProperties>
     </configuration>
     <dependencies>
@@ -155,10 +156,10 @@ For example:
 # custom event schedule generator
 
 To create your own event schedule you can implement your own
-`nl.stokpop.eventscheduler.event.EventGenerator`.
+`nl.stokpop.eventscheduler.api.EventGenerator`.
 
 And add the following generator-class and settings to the customEvents tag
-of the gatling or jmeter plugin (instead of a verbatim list of events).
+of the Gatling or jMeter plugin (instead of a verbatim list of events).
 
 ```xml
 <customEvents>
@@ -177,4 +178,5 @@ should generally not be used as properties inside the implementation class.
 
 ## ClassLoaders
 If classes are not available on the default classpath of the Thread, you can provide your
-own ClassLoader via `nl.stokpop.eventscheduler.EventSchedulerBuilder.build(java.lang.ClassLoader)`.
+own ClassLoader via `nl.stokpop.eventscheduler.api.EventSchedulerBuilder.build(java.lang.ClassLoader)`.
+Useful when running with Gradle instead of Maven.

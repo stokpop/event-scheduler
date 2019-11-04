@@ -13,8 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nl.stokpop.eventscheduler.event;
+package nl.stokpop.eventscheduler;
 
+import nl.stokpop.eventscheduler.api.CustomEvent;
+import nl.stokpop.eventscheduler.api.Event;
+import nl.stokpop.eventscheduler.api.EventAdapter;
 import nl.stokpop.eventscheduler.log.EventLoggerStdOut;
 import org.junit.Test;
 
@@ -27,11 +30,10 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.internal.verification.VerificationModeFactory.times;
 
-public class EventProviderTest {
+public class EventBroadcasterTest {
 
     @Test
     public void broadcastAbort() {
-
         Event myEvent = mock(Event.class);
         CustomEvent scheduleEvent = mock(CustomEvent.class);
 
@@ -43,15 +45,14 @@ public class EventProviderTest {
         broadcaster.broadcastBeforeTest();
         broadcaster.broadcastKeepAlive();
         broadcaster.broadcastCustomEvent(scheduleEvent);
-        broadcaster.broadcastCheckResults();
+        broadcaster.broadcastCheck();
         broadcaster.broadcastAbortTest();
 
         verify(myEvent, times(1)).beforeTest();
         verify(myEvent, times(1)).keepAlive();
         verify(myEvent, times(1)).customEvent(scheduleEvent);
-        verify(myEvent, times(1)).checkTest();
+        verify(myEvent, times(1)).check();
         verify(myEvent, times(1)).abortTest();
-
     }
 
     @Test

@@ -13,12 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nl.stokpop.eventscheduler.event;
+package nl.stokpop.eventscheduler.api;
 
 /**
  * This interface can be implemented in other jars and be put on the classpath.
  *
- * Provide a file in META-INF/services/nl.stokpop.eventscheduler.Event that contains the
+ * Provide a file in META-INF/services/nl.stokpop.eventscheduler.api.Event that contains the
  * fully qualified name of the implementing class.
  *
  * This class will be used when these events are called. Possibly you can even provide multiple implementations
@@ -56,10 +56,10 @@ public interface Event {
     void abortTest();
 
     /**
-     * Called to check test results. Can be used to have a test run fail or succeed.
-     * Fail by throwing a runtime exception.
+     * Called to check test results (for example the requirements are checked).
+     * Can be used to have a test run fail or succeed in continuous integration setups.
      */
-    void checkTest();
+    EventCheck check();
 
     /**
      * Called for each custom event, according to the custom even schedule.
