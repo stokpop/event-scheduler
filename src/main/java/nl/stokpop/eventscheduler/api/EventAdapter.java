@@ -23,24 +23,36 @@ package nl.stokpop.eventscheduler.api;
  */
 public abstract class EventAdapter implements Event {
 
+    protected final String eventName;
+    protected final TestContext testContext;
+    protected final EventProperties eventProperties;
+    protected final EventLogger logger;
+
+    public EventAdapter(String eventName, TestContext testContext, EventProperties eventProperties, EventLogger logger) {
+        this.eventName = eventName;
+        this.testContext = testContext;
+        this.eventProperties = eventProperties;
+        this.logger = logger;
+    }
+
     @Override
     public void beforeTest() {
-
+        logger.debug(String.format("[%s] [%s] beforeTest (not implemented)", eventName, this.getClass().getName()));
     }
 
     @Override
     public void afterTest() {
-
+        logger.debug(String.format("[%s] [%s] afterTest (not implemented)", eventName, this.getClass().getName()));
     }
 
     @Override
     public void keepAlive() {
-
+        logger.debug(String.format("[%s] [%s] keepAlive (not implemented)", eventName, this.getClass().getName()));
     }
 
     @Override
     public void abortTest() {
-
+        logger.debug(String.format("[%s] [%s] abortTest (not implemented)", eventName, this.getClass().getName()));
     }
 
     @Override
@@ -49,7 +61,13 @@ public abstract class EventAdapter implements Event {
     }
 
     @Override
-    public void customEvent(CustomEvent scheduleEvent) {
-
+    public void customEvent(CustomEvent customEvent) {
+        logger.debug(String.format("[%s] [%s] [%s] customEvent (not implemented)", eventName, this.getClass().getName(), customEvent.getName()));
     }
+
+    @Override
+    public final String getName() {
+        return eventName;
+    }
+
 }

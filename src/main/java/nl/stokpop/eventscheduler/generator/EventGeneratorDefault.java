@@ -15,10 +15,7 @@
  */
 package nl.stokpop.eventscheduler.generator;
 
-import nl.stokpop.eventscheduler.api.EventGeneratorProperties;
-import nl.stokpop.eventscheduler.api.TestContext;
-import nl.stokpop.eventscheduler.api.CustomEvent;
-import nl.stokpop.eventscheduler.api.EventGenerator;
+import nl.stokpop.eventscheduler.api.*;
 import nl.stokpop.eventscheduler.exception.EventSchedulerRuntimeException;
 
 import java.io.BufferedReader;
@@ -34,7 +31,7 @@ public class EventGeneratorDefault implements EventGenerator {
 
     private final EventGeneratorProperties properties;
 
-    EventGeneratorDefault(TestContext context, EventGeneratorProperties properties) {
+    EventGeneratorDefault(TestContext context, EventGeneratorProperties properties, EventLogger logger) {
         this.properties = properties;
     }
 

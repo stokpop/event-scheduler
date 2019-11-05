@@ -15,15 +15,10 @@
  */
 package nl.stokpop.eventscheduler;
 
-import nl.stokpop.eventscheduler.api.TestContext;
-import nl.stokpop.eventscheduler.api.TestContextBuilder;
-import nl.stokpop.eventscheduler.api.CustomEvent;
-import nl.stokpop.eventscheduler.api.EventGenerator;
-import nl.stokpop.eventscheduler.api.EventProperties;
+import nl.stokpop.eventscheduler.api.*;
 import nl.stokpop.eventscheduler.exception.EventSchedulerRuntimeException;
 import nl.stokpop.eventscheduler.generator.EventGeneratorDefault;
 import nl.stokpop.eventscheduler.generator.EventGeneratorFactoryDefault;
-import nl.stokpop.eventscheduler.api.EventGeneratorProperties;
 import nl.stokpop.eventscheduler.log.EventLoggerStdOut;
 import org.junit.Test;
 
@@ -33,11 +28,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 
 public class EventSchedulerEngineTest {
 
@@ -52,7 +43,8 @@ public class EventSchedulerEngineTest {
         map.put(EventGeneratorDefault.EVENT_SCHEDULE_TAG, eventsAsText);
         EventGeneratorProperties generatorProperties = new EventGeneratorProperties(map);
 
-        EventGenerator eventGenerator = new EventGeneratorFactoryDefault().create(new TestContextBuilder().build(), generatorProperties);
+        EventGenerator eventGenerator = new EventGeneratorFactoryDefault()
+                .create(new TestContextBuilder().build(), generatorProperties, EventLoggerStdOut.INSTANCE);
 
         String eventScheduleMessage = EventSchedulerEngine.createEventScheduleMessage(eventGenerator.generate());
 

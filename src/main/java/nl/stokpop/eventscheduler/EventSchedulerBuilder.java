@@ -18,12 +18,13 @@ package nl.stokpop.eventscheduler;
 import jdk.nashorn.internal.ir.annotations.Immutable;
 import net.jcip.annotations.NotThreadSafe;
 import nl.stokpop.eventscheduler.api.*;
-import nl.stokpop.eventscheduler.event.*;
+import nl.stokpop.eventscheduler.event.EventFactoryProvider;
 import nl.stokpop.eventscheduler.exception.EventSchedulerRuntimeException;
+import nl.stokpop.eventscheduler.generator.EventGeneratorDefault;
 import nl.stokpop.eventscheduler.generator.EventGeneratorFactoryDefault;
 import nl.stokpop.eventscheduler.generator.EventGeneratorFactoryProvider;
-import nl.stokpop.eventscheduler.api.EventGeneratorProperties;
 import nl.stokpop.eventscheduler.log.EventLoggerDevNull;
+import nl.stokpop.eventscheduler.log.EventLoggerWithName;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -118,10 +119,10 @@ public class EventSchedulerBuilder {
     private Event createEvent(EventFactoryProvider provider, EventInfo eventInfo, TestContext testContext) {
         String factoryClassName = eventInfo.getEventProperties().getFactoryClassName();
         String eventName = eventInfo.getEventName();
-
+        EventLogger eventLogger = new EventLoggerWithName(eventName, factoryClassName, logger);
         return provider.factoryByClassName(factoryClassName)
                 .orElseThrow(() -> new RuntimeException(factoryClassName + " not found on classpath"))
-                .create(eventName, testContext, eventInfo.getEventProperties());
+                .create(eventName, testContext, eventInfo.getEventProperties(), eventLogger);
     }
 
     private List<CustomEvent> generateCustomEventSchedule(TestContext context, String text, EventLogger logger, ClassLoader classLoader) {
@@ -130,7 +131,8 @@ public class EventSchedulerBuilder {
 
         if (text == null) {
             eventGeneratorProperties = new EventGeneratorProperties();
-            eventGenerator = new EventGeneratorFactoryDefault().create(testContext, eventGeneratorProperties);
+            EventLoggerWithName myLogger = new EventLoggerWithName("defaultFactory", EventGeneratorDefault.class.getName(), logger);
+            eventGenerator = new EventGeneratorFactoryDefault().create(testContext, eventGeneratorProperties, myLogger);
         }
         else if (text.contains(GENERATOR_CLASS_META_TAG)) {
 
@@ -139,7 +141,9 @@ public class EventSchedulerBuilder {
             String generatorClassname = eventGeneratorProperties.getMetaProperty(GENERATOR_CLASS_META_TAG);
 
             EventGeneratorFactory eventGeneratorFactory = findAndCreateEventScheduleGenerator(logger, generatorClassname, classLoader);
-            eventGenerator = eventGeneratorFactory.create(context, eventGeneratorProperties);
+
+            EventLoggerWithName myLogger = new EventLoggerWithName("customFactory", generatorClassname, logger);
+            eventGenerator = eventGeneratorFactory.create(context, eventGeneratorProperties, myLogger);
         }
         else {
             // assume the default input of lines of events
@@ -147,7 +151,8 @@ public class EventSchedulerBuilder {
             properties.put("eventSchedule", text);
 
             eventGeneratorProperties = new EventGeneratorProperties(properties);
-            eventGenerator = new EventGeneratorFactoryDefault().create(context, eventGeneratorProperties);
+            EventLoggerWithName myLogger = new EventLoggerWithName("defaultFactory", EventGeneratorDefault.class.getName(), logger);
+            eventGenerator = new EventGeneratorFactoryDefault().create(context, eventGeneratorProperties, myLogger);
         }
 
         return eventGenerator.generate();

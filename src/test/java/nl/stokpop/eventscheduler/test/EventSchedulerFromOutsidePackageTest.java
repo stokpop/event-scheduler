@@ -17,24 +17,16 @@ package nl.stokpop.eventscheduler.test;
 
 import nl.stokpop.eventscheduler.EventScheduler;
 import nl.stokpop.eventscheduler.EventSchedulerBuilder;
-import nl.stokpop.eventscheduler.EventStatus;
 import nl.stokpop.eventscheduler.api.*;
-import nl.stokpop.eventscheduler.event.EventDefault;
-import nl.stokpop.eventscheduler.event.EventFactoryProvider;
-import nl.stokpop.eventscheduler.exception.EventCheckFailureException;
 import nl.stokpop.eventscheduler.log.EventLoggerStdOut;
 import org.junit.Test;
-import org.mockito.Mockito;
 
 import java.time.Duration;
 import java.util.Collections;
-import java.util.Optional;
 import java.util.Properties;
 
-import static org.junit.Assert.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.Mockito.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 /**
  * This test class is in another package to check access package private fields.

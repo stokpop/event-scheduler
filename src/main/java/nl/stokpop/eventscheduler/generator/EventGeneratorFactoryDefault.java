@@ -15,15 +15,12 @@
  */
 package nl.stokpop.eventscheduler.generator;
 
-import nl.stokpop.eventscheduler.api.EventGeneratorFactory;
-import nl.stokpop.eventscheduler.api.EventGeneratorProperties;
-import nl.stokpop.eventscheduler.api.TestContext;
-import nl.stokpop.eventscheduler.api.EventGenerator;
+import nl.stokpop.eventscheduler.api.*;
 
 public class EventGeneratorFactoryDefault implements EventGeneratorFactory {
     
     @Override
-    public EventGenerator create(TestContext context, EventGeneratorProperties properties) {
-        return new EventGeneratorDefault(context, properties);
+    public EventGenerator create(TestContext context, EventGeneratorProperties properties, EventLogger logger) {
+        return new EventGeneratorDefault(context, properties, logger);
     }
 }

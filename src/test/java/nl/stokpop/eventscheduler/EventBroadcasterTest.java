@@ -15,9 +15,7 @@
  */
 package nl.stokpop.eventscheduler;
 
-import nl.stokpop.eventscheduler.api.CustomEvent;
-import nl.stokpop.eventscheduler.api.Event;
-import nl.stokpop.eventscheduler.api.EventAdapter;
+import nl.stokpop.eventscheduler.api.*;
 import nl.stokpop.eventscheduler.log.EventLoggerStdOut;
 import org.junit.Test;
 
@@ -78,20 +76,24 @@ public class EventBroadcasterTest {
     }
 
     private static class MyTestEventThatCanFail extends EventAdapter {
+        // just because it is needed...
+        private final static TestContext testContext = new TestContextBuilder().build();
+        private final static EventProperties eventProperties = new EventProperties();
+
         private AtomicInteger counter;
         private int expectValue;
         private int newValue;
+
+
         MyTestEventThatCanFail(AtomicInteger counter, int expectValue, int newValue) {
+            super("MyTestEventThatCanFail", testContext, eventProperties, EventLoggerStdOut.INSTANCE);
             this.counter = counter;
             this.expectValue= expectValue;
             this.newValue = newValue;
         }
+
         @Override
-        public String getName() {
-            return "MyTestEventThatCanFail";
-        }
-        @Override
-        public void customEvent(CustomEvent scheduleEvent) {
+        public void customEvent(CustomEvent customEvent) {
             if (!counter.compareAndSet(expectValue, newValue)) throw new RuntimeException("counter was not " + expectValue);
         }
     }
