@@ -1,7 +1,5 @@
 package nl.stokpop.eventscheduler.api;
 
-import nl.stokpop.eventscheduler.EventStatus;
-
 public class EventCheck {
 
     public static final EventCheck DEFAULT =

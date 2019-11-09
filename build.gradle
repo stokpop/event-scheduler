@@ -1,5 +1,7 @@
 import org.gradle.internal.os.OperatingSystem
 
+import java.time.Duration
+
 plugins {
     id 'java'
     id 'java-library'
@@ -22,7 +24,7 @@ dependencies {
     implementation 'net.jcip:jcip-annotations:1.0'
     testImplementation 'junit:junit:4.12'
     testImplementation 'org.mockito:mockito-core:3.1.0'
-}
+`}
 
 group = 'nl.stokpop'
 version = '2.0.0-SNAPSHOT'
@@ -59,8 +61,8 @@ nexusPublishing {
     repositories {
         sonatype()
     }
-    connectTimeout=Duration.ofMinutes(10)
-    clientTimeout=Duration.ofMinutes(10)
+    connectTimeout = Duration.ofMinutes(10)
+    clientTimeout = Duration.ofMinutes(10)
 }
 
 task sourceJar(type: Jar) {
@@ -114,19 +116,26 @@ if (project.hasProperty('release')) {
                     // POM signature
                     beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
                     // Target repository
-                    repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
+                    String repositoryUrl
+                    if (version.endsWith("SNAPSHOT")) {
+                        repositoryUrl = "https://oss.sonatype.org/content/repositories/snapshots/"
+                    }
+                    else {
+                        repositoryUrl = "https://oss.sonatype.org/service/local/staging/deploy/maven2/"
+                    }
+                    repository(url: repositoryUrl) {
                         authentication(userName: ossrhUser, password: ossrhPassword)
                     }
                     pom.project {
                         name project.name
                         description project.description
                         packaging 'jar'
-                        url 'https://github.com/stokpop/lograter.git'
+                        url 'https://github.com/stokpop/event-scheduler.git'
 
                         scm {
-                            connection 'scm:git:https://github.com/stokpop/lograter.git'
-                            developerConnection 'scm:git:git@github.com:stokpop/lograter.git'
-                            url 'https://github.com/stokpop/lograter.git'
+                            connection 'scm:git:https://github.com/stokpop/event-scheduler.git'
+                            developerConnection 'scm:git:git@github.com:stokpop/event-scheduler.git'
+                            url 'https://github.com/stokpop/event-scheduler.git'
                         }
 
                         licenses {

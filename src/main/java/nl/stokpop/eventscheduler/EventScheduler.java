@@ -111,7 +111,7 @@ public final class EventScheduler {
         if (!success) {
             String failureMessage = eventChecks.stream()
                     .filter(e -> e.getEventStatus() == EventStatus.FAILURE)
-                    .map(e -> String.format("eventId: '%s' message: '%s'", e.getEventId(), e.getMessage()))
+                    .map(e -> String.format("class: '%s' eventId: '%s' message: '%s'", e.getEventClassName(), e.getEventId(), e.getMessage()))
                     .collect(Collectors.joining(", "));
             throw new EventCheckFailureException(String.format("Event checks with failures found: [%s]", failureMessage));
         }

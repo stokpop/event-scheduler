@@ -19,5 +19,5 @@ package nl.stokpop.eventscheduler.api;
  * Create an EventGenerator based on the given test context and properties.
  */
 public interface EventGeneratorFactory {
-    EventGenerator create(TestContext context, EventGeneratorProperties properties);
+    EventGenerator create(TestContext context, EventGeneratorProperties properties, EventLogger logger);
 }

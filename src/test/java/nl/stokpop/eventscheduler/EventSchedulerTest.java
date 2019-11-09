@@ -47,7 +47,7 @@ public class EventSchedulerTest
         Event event = Mockito.mock(Event.class);
         EventFactory eventFactory = Mockito.mock(EventFactory.class);
 
-        Mockito.when(eventFactory.create(any(), any(), any())).thenReturn(event);
+        Mockito.when(eventFactory.create(any(), any(), any(), any())).thenReturn(event);
         Mockito.when(provider.factoryByClassName(any())).thenReturn(Optional.of(eventFactory));
         EventCheck eventOne = new EventCheck("eventOne", "nl.stokpop.MockEvent", EventStatus.FAILURE, "This event failed!");
         EventCheck eventTwo = new EventCheck("eventTwo", "nl.stokpop.MockEvent", EventStatus.SUCCESS, "This event was ok!");
