@@ -10,8 +10,17 @@ public class EventLoggerWithName implements EventLogger {
 
     public EventLoggerWithName(String name, String classname, EventLogger logger) {
         this.name = name;
-        this.classname = classname;
+        this.classname = removePackages(classname);
         this.logger = logger;
+    }
+
+    private String removePackages(String classname) {
+        if (classname.contains(".")) {
+            return classname.substring(classname.lastIndexOf('.') + 1);
+        }
+        else {
+            return classname;
+        }
     }
 
 

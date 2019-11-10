@@ -119,10 +119,16 @@ public class EventSchedulerBuilder {
     private Event createEvent(EventFactoryProvider provider, EventInfo eventInfo, TestContext testContext) {
         String factoryClassName = eventInfo.getEventProperties().getFactoryClassName();
         String eventName = eventInfo.getEventName();
-        EventLogger eventLogger = new EventLoggerWithName(eventName, factoryClassName, logger);
+        EventLogger eventLogger = new EventLoggerWithName(eventName, removeFactoryPostfix(factoryClassName), logger);
         return provider.factoryByClassName(factoryClassName)
                 .orElseThrow(() -> new RuntimeException(factoryClassName + " not found on classpath"))
                 .create(eventName, testContext, eventInfo.getEventProperties(), eventLogger);
+    }
+
+    private String removeFactoryPostfix(String factoryClassName) {
+        int index = factoryClassName.indexOf("Factory");
+        String newName = index != -1 ? factoryClassName.substring(0, index) : factoryClassName;
+        return newName;
     }
 
     private List<CustomEvent> generateCustomEventSchedule(TestContext context, String text, EventLogger logger, ClassLoader classLoader) {
