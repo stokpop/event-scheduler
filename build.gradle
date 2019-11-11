@@ -21,7 +21,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'net.jcip:jcip-annotations:1.0'
+    implementation 'com.github.stephenc.jcip:jcip-annotations:1.0-1'
     testImplementation 'junit:junit:4.12'
     testImplementation 'org.mockito:mockito-core:3.1.0'
 }
