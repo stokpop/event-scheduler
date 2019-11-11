@@ -180,7 +180,7 @@ of the Gatling or jMeter plugin (instead of a verbatim list of events).
 
 ```xml
 <customEvents>
-    @generatorFactoryClass=com.stokpop.event.StokpopEventGenerator
+    @generatorFactoryClass=com.stokpop.event.StokpopEventGeneratorFactory
     events-file=${project.basedir}/src/test/resources/events.json
     foo=bar
 </customEvents>
