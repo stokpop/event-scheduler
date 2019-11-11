@@ -15,20 +15,25 @@
  */
 package nl.stokpop.eventscheduler;
 
-import nl.stokpop.eventscheduler.api.*;
+import nl.stokpop.eventscheduler.api.EventSchedulerSettings;
+import nl.stokpop.eventscheduler.api.EventSchedulerSettingsBuilder;
+import nl.stokpop.eventscheduler.api.TestContext;
+import nl.stokpop.eventscheduler.api.TestContextBuilder;
 import nl.stokpop.eventscheduler.exception.EventSchedulerRuntimeException;
 import org.junit.Test;
 
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.util.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 public class EventSchedulerBuilderTest {
 
     @Test
     public void createWithAlternativeClass() {
-         String alternativeClassCustomEvents = "  @generator-class=nl.stokpop.eventscheduler.generator.EventGeneratorFactoryDefault\n" +
-                 "  eventSchedule=PT1M|do-something \n";
+         String alternativeClassCustomEvents = "  @generatorFactoryClass=nl.stokpop.eventscheduler.generator.EventGeneratorFactoryDefault\n" +
+                 "  my-setting=my-value \n";
 
          EventSchedulerBuilder eventSchedulerBuilder = new EventSchedulerBuilder()
                  .setCustomEvents(alternativeClassCustomEvents)
@@ -39,8 +44,8 @@ public class EventSchedulerBuilderTest {
         EventScheduler eventScheduler =
                 eventSchedulerBuilder.build(new URLClassLoader(new URL[]{}, classLoader));
 
-        // TODO what to assert?
-
+        eventScheduler.checkResults();
+        eventScheduler.abortSession();
     }
 
     /**

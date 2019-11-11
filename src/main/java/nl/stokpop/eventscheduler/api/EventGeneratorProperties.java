@@ -15,30 +15,47 @@
  */
 package nl.stokpop.eventscheduler.api;
 
+import nl.stokpop.eventscheduler.exception.EventSchedulerRuntimeException;
+
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Set;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * Properties for event schedule generators.
- * Names that start with @ are filtered out.
+ * Names that start with @ are filtered out and used as meta properties.
+ * Meta property lines have syntax <code>@metaproperty=value</code>.
  *
- *  This is an immutable class and makes an unmodifiable copies of the given Map.
+ * This is an immutable class and makes an unmodifiable copies of the given Map.
  */
 public class EventGeneratorProperties {
+
+    private static final Pattern PATTERN_NEW_LINE = Pattern.compile("\n");
+    private static final String PREFIX_META_PROPERTY = "@";
+
     private Map<String, String> properties;
     private Map<String, String> metaProperties;
 
     public EventGeneratorProperties(Map<String,String> props) {
 
         Map<String, String> propsMap = props.entrySet().stream()
-                .filter(e -> !e.getKey().startsWith("@"))
+                .filter(e -> !e.getKey().startsWith(PREFIX_META_PROPERTY))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
+        // get metadata from lines starting with @ and remove @ from the @key=value entry
         Map<String, String> metaMap = props.entrySet().stream()
-                .filter(e -> e.getKey().startsWith("@"))
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+                .filter(e -> e.getKey().startsWith(PREFIX_META_PROPERTY))
+                .collect(Collectors.toMap(e -> e.getKey().substring(PREFIX_META_PROPERTY.length()), Map.Entry::getValue));
+
+        Set<String> metaOptions = metaMap.keySet();
+        if (!metaOptions.stream()
+                .allMatch(EventGeneratorMetaProperty::isEnumValue)) {
+            String availableOptions = Arrays.stream(EventGeneratorMetaProperty.values()).map(Enum::name).collect(Collectors.joining(", "));
+            throw new EventSchedulerRuntimeException(String.format("Contains unknown meta option: %s, availabe: %s", metaOptions, availableOptions));
+        }
 
         properties = Collections.unmodifiableMap(propsMap);
         metaProperties = Collections.unmodifiableMap(metaMap);
@@ -61,11 +78,17 @@ public class EventGeneratorProperties {
     }
 
     private static Map<String, String> createGeneratorSettings(String generatorSettingsAsText) {
-        return Stream.of(generatorSettingsAsText.split("\n"))
+        return PATTERN_NEW_LINE.splitAsStream(generatorSettingsAsText)
                 .map(line -> line.split("="))
                 .filter(split -> split.length == 2)
                 .filter(split -> split[0] != null && split[1] != null)
                 .collect(Collectors.toMap(e -> e[0].trim(), e -> e[1].trim()));
+    }
+
+    public static boolean hasLinesThatStartWithMetaPropertyPrefix(String text) {
+        return PATTERN_NEW_LINE.splitAsStream(text)
+                .map(String::trim)
+                .anyMatch(line -> line.startsWith(PREFIX_META_PROPERTY));
     }
 
     @Override

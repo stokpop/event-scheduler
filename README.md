@@ -1,6 +1,8 @@
 # event-scheduler
 
-Add this java library to your project to easily generate events.
+Add this java library to your project to generate timed events.
+
+For instance during a performance test to dynamically increase response times over time.
 
 # usage
 
@@ -21,22 +23,37 @@ TestContext context = new TestContextBuilder()
         .setConstantLoadTimeInSeconds("300")
         .setAnnotations("annotation")
         .setVariables(Collections.emptyMap())
-        .setTags("")
+        .setTags("tag1,tag2")
         .build();
 
+Properties properties = new Properties();
+properties.put("name", "value");
+properties.put(EventProperties.FACTORY_CLASSNAME_KEY, "nl.stokpop.eventscheduler.event.EventFactoryDefault");
+
 EventScheduler scheduler = new EventSchedulerBuilder()
-    .setEventSchedulerSettings(settings)
-    .setTestContext(context)
-    .setAssertResultsEnabled(true)
-    .addEventProperty("myClass", "name", "value")
-    .setCustomEvents(eventSchedule)
-    .setLogger(testLogger)
-    .build();
+        .setEventSchedulerSettings(settings)
+        .setTestContext(context)
+        .setAssertResultsEnabled(true)
+        .addEvent("myEvent1", properties)
+        .addEvent("myEvent2", properties)
+        .addEvent("myEvent3", properties)
+        .setCustomEvents(eventSchedule)
+        .setLogger(testLogger)
+        .setEventFactoryProvider(provider)
+        .build();
 ```
 
-Note that a lot of properties have decent defaults and do not need to be 
-called, such as the retry and keep alive properties.
+Note that a lot of properties of the builders have decent defaults 
+and do not need to be called, such as the retry and keep alive properties.
 
+When adding events, each event can have its own properties. That makes it possible
+to configure multiple Wiremock event that use different Wiremock urls for instance. 
+
+The `addEvent` accepts a unique event name and the properties for that particular event.
+Also, the event factory class needs to be provided via the `EventProperties.FACTORY_CLASSNAME_KEY`, 
+so the events can be dynamically instantiated based on the availability on the classpath
+of the `EventFactory` and `Event` implementation classes.
+ 
 Then call these methods at the appropriate time:
 
 ### scheduler.beforeTest()
@@ -48,31 +65,27 @@ Call when the load test stops.
 ## Test Events
 
 During a test run this Event Scheduler emits events. You can put
-your own implementation of the `Event` interface on the classpath
+your own implementation of the `EventFactory` and `Event` interface on the classpath
 and add your own code to these events.
 
-Events available, with example usage:
+Events triggers available, with example usage:
 * _before test_ - use to restart servers or setup/cleanup environment
 * _after test_ - start generating reports, clean up environment
 * _keep alive calls_ - send calls to any remote API for instance
+* _check result_ - after a test check results for the event, if failures are present the CI build can fail 
+* _abort test_ - abort a running test, do not run to end
 * _custom events_ - any event you can define in the event scheduler, e.g. failover, increase stub delay times or scale-down events 
 * _custom events_ - any event you can define in the event scheduler, e.g. failover, increase stub delay times or scale-down events 
 
-The keep alive is scheduled each 15 seconds during the test.
-
-The events will also be given a set of properties per implementation class.
-The properties can be added before the test run using the `EventSchedulerBuilder`.
-
-To add a property, use the addEventProperty when creating the client:
-
-```java
-builder.addEventProperty("nl.stokpop.MyEventClass", "name", "value")
-```
+The keep alive is scheduled each 15 seconds during the test. The keep-alive schedule can also be changed.
 	
 ## custom events
 
-You can provide custom events via a list of <duration,eventName(description),eventSettings> tuples, 
-one on each line.
+You can provide custom events via a list of 
+
+    <duration,eventName(description),eventSettings> 
+
+tuples, one per line.
 
 The eventName can be any unique name among the custom events. You can use this eventName
 in your own implementation of the Event interface to select what code to execute.
@@ -137,7 +150,7 @@ For example:
         </eventScheduleScript>
         <eventProperties>
             <StokpopHelloEvent1>
-                <eventFactory>nl.stokpop.event.StokpopHelloEvent</eventFactory>
+                <eventFactory>nl.stokpop.event.StokpopHelloEventFactory</eventFactory>
                 <myRestServer>https://my-rest-api</myName>
                 <myCredentials>${ENV.SECRET}</myCredentials>
             </StokpopHelloEvent1>
@@ -147,31 +160,35 @@ For example:
         <dependency>
             <groupId>nl.stokpop</groupId>
             <artifactId>hello-world-events</artifactId>
-            <version>1.2.3</version>
+            <version>1.0.0</version>
         </dependency>
     </dependencies>
 </plugin>
 ```
 
+Note that the `eventFactory` element is mandatory, it defines the factory to use to create an event.
+The `StokpopHelloEvent1` element is the name of the particular event created by the Factory and can be 
+any unique event name. The event name is used in the logging. 
+
 # custom event schedule generator
 
 To create your own event schedule you can implement your own
-`nl.stokpop.eventscheduler.api.EventGenerator`.
+`nl.stokpop.eventscheduler.api.EventGenerator` and `EventGeneratorFactory`.
 
 And add the following generator-class and settings to the customEvents tag
 of the Gatling or jMeter plugin (instead of a verbatim list of events).
 
 ```xml
 <customEvents>
-    @generator-class=com.stokpop.event.StokpopEventGenerator
+    @generatorFactoryClass=com.stokpop.event.StokpopEventGenerator
     events-file=${project.basedir}/src/test/resources/events.json
     foo=bar
 </customEvents>
 ```
 
-The generator-class should be available on the classpath.
-The foo=bar is an example of properties for the event generator.
-You can use multiple lines.
+The class defined by `@generatorFactoryClass` should be available on the classpath.
+The `foo=bar` is an example of properties for the event generator.
+You can use multiple lines for multiple properties.
 
 Properties that start with @-sign are so-called "meta" properties and
 should generally not be used as properties inside the implementation class.   

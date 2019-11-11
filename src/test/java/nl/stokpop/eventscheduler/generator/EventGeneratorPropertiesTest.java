@@ -25,7 +25,7 @@ public class EventGeneratorPropertiesTest {
 
     @Test
     public void retrieveProperties() {
-        String text = "    @my-meta-prop    =     bar  \n" +
+        String text = "    @generatorFactoryClass    =     bar  \n" +
                 "   my-prop    = foo   \n";
 
         EventGeneratorProperties props = new EventGeneratorProperties(text);
@@ -34,7 +34,7 @@ public class EventGeneratorPropertiesTest {
         assertTrue(props.toString().contains("bar"));
         assertTrue(props.toString().contains("foo"));
         
-        assertEquals("bar", props.getMetaProperty("@my-meta-prop"));
+        assertEquals("bar", props.getMetaProperty("generatorFactoryClass"));
         assertEquals("foo", props.getProperty("my-prop"));
         
 

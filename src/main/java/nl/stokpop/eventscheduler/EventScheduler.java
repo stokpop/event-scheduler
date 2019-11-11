@@ -15,7 +15,13 @@
  */
 package nl.stokpop.eventscheduler;
 
-import nl.stokpop.eventscheduler.api.*;
+import nl.stokpop.eventscheduler.api.CustomEvent;
+import nl.stokpop.eventscheduler.api.EventCheck;
+import nl.stokpop.eventscheduler.api.EventLogger;
+import nl.stokpop.eventscheduler.api.EventProperties;
+import nl.stokpop.eventscheduler.api.EventSchedulerSettings;
+import nl.stokpop.eventscheduler.api.EventStatus;
+import nl.stokpop.eventscheduler.api.TestContext;
 import nl.stokpop.eventscheduler.exception.EventCheckFailureException;
 
 import java.util.List;
@@ -49,6 +55,7 @@ public final class EventScheduler {
         this.broadcaster = broadcaster;
         this.scheduleEvents = scheduleEvents;
         this.logger = logger;
+        this.executorEngine = new EventSchedulerEngine(logger);
     }
 
     /**
@@ -57,9 +64,7 @@ public final class EventScheduler {
     public void startSession() {
         logger.info("Start test session");
         isSessionStopped = false;
-
-        executorEngine = new EventSchedulerEngine(logger);
-
+        
         broadcaster.broadcastBeforeTest();
 
         executorEngine.startKeepAliveThread(context, settings, broadcaster, eventProperties);
@@ -113,7 +118,13 @@ public final class EventScheduler {
                     .filter(e -> e.getEventStatus() == EventStatus.FAILURE)
                     .map(e -> String.format("class: '%s' eventId: '%s' message: '%s'", e.getEventClassName(), e.getEventId(), e.getMessage()))
                     .collect(Collectors.joining(", "));
-            throw new EventCheckFailureException(String.format("Event checks with failures found: [%s]", failureMessage));
+            String message = String.format("Event checks with failures found: [%s]", failureMessage);
+            if (checkResultsEnabled) {
+                throw new EventCheckFailureException(message);
+            }
+            else {
+                logger.warn(String.format("CheckResultsEnabled is false, not throwing EventCheckFailureException with message: %s", message));
+            }
         }
     }
 

@@ -17,7 +17,16 @@ package nl.stokpop.eventscheduler;
 
 import jdk.nashorn.internal.ir.annotations.Immutable;
 import net.jcip.annotations.NotThreadSafe;
-import nl.stokpop.eventscheduler.api.*;
+import nl.stokpop.eventscheduler.api.CustomEvent;
+import nl.stokpop.eventscheduler.api.Event;
+import nl.stokpop.eventscheduler.api.EventGenerator;
+import nl.stokpop.eventscheduler.api.EventGeneratorFactory;
+import nl.stokpop.eventscheduler.api.EventGeneratorMetaProperty;
+import nl.stokpop.eventscheduler.api.EventGeneratorProperties;
+import nl.stokpop.eventscheduler.api.EventLogger;
+import nl.stokpop.eventscheduler.api.EventProperties;
+import nl.stokpop.eventscheduler.api.EventSchedulerSettings;
+import nl.stokpop.eventscheduler.api.TestContext;
 import nl.stokpop.eventscheduler.event.EventFactoryProvider;
 import nl.stokpop.eventscheduler.exception.EventSchedulerRuntimeException;
 import nl.stokpop.eventscheduler.generator.EventGeneratorDefault;
@@ -26,7 +35,13 @@ import nl.stokpop.eventscheduler.generator.EventGeneratorFactoryProvider;
 import nl.stokpop.eventscheduler.log.EventLoggerDevNull;
 import nl.stokpop.eventscheduler.log.EventLoggerWithName;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Properties;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -34,9 +49,7 @@ import java.util.stream.Collectors;
  */
 @NotThreadSafe
 public class EventSchedulerBuilder {
-
-    private static final String GENERATOR_CLASS_META_TAG = "@generator-class";
-
+    
     private final Set<EventInfo> eventInfos = new HashSet<>();
 
     private TestContext testContext;
@@ -106,7 +119,9 @@ public class EventSchedulerBuilder {
                 ? EventFactoryProvider.createInstanceFromClasspath(classLoader)
                 : eventFactoryProvider;
 
-        List<Event> events = eventInfos.stream().map(p -> createEvent(provider, p, testContext)).collect(Collectors.toList());
+        List<Event> events = eventInfos.stream()
+                .map(p -> createEvent(provider, p, testContext))
+                .collect(Collectors.toList());
 
         EventBroadcaster broadcaster = eventBroadcaster == null
                 ? new EventBroadcasterDefault(events, logger)
@@ -140,11 +155,11 @@ public class EventSchedulerBuilder {
             EventLoggerWithName myLogger = new EventLoggerWithName("defaultFactory", EventGeneratorDefault.class.getName(), logger);
             eventGenerator = new EventGeneratorFactoryDefault().create(testContext, eventGeneratorProperties, myLogger);
         }
-        else if (text.contains(GENERATOR_CLASS_META_TAG)) {
+        else if (EventGeneratorProperties.hasLinesThatStartWithMetaPropertyPrefix(text)) {
 
             eventGeneratorProperties = new EventGeneratorProperties(text);
 
-            String generatorClassname = eventGeneratorProperties.getMetaProperty(GENERATOR_CLASS_META_TAG);
+            String generatorClassname = eventGeneratorProperties.getMetaProperty(EventGeneratorMetaProperty.generatorFactoryClass.name());
 
             EventGeneratorFactory eventGeneratorFactory = findAndCreateEventScheduleGenerator(logger, generatorClassname, classLoader);
 

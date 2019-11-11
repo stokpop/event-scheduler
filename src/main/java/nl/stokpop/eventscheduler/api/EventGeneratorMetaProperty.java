@@ -15,9 +15,12 @@
  */
 package nl.stokpop.eventscheduler.api;
 
-/**
- * Create an EventGenerator based on the given test context and properties.
- */
-public interface EventFactory {
-    Event create(String eventName, TestContext context, EventProperties properties, EventLogger logger);
+import java.util.Arrays;
+
+public enum EventGeneratorMetaProperty {
+    generatorFactoryClass;
+
+    public static boolean isEnumValue(String value) {
+        return Arrays.stream(EventGeneratorMetaProperty.values()).anyMatch(s -> s.name().equals(value));
+    }
 }

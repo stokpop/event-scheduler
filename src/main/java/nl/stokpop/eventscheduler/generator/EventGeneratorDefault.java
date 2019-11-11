@@ -15,7 +15,11 @@
  */
 package nl.stokpop.eventscheduler.generator;
 
-import nl.stokpop.eventscheduler.api.*;
+import nl.stokpop.eventscheduler.api.CustomEvent;
+import nl.stokpop.eventscheduler.api.EventGenerator;
+import nl.stokpop.eventscheduler.api.EventGeneratorProperties;
+import nl.stokpop.eventscheduler.api.EventLogger;
+import nl.stokpop.eventscheduler.api.TestContext;
 import nl.stokpop.eventscheduler.exception.EventSchedulerRuntimeException;
 
 import java.io.BufferedReader;
@@ -47,6 +51,7 @@ public class EventGeneratorDefault implements EventGenerator {
                     List<String> events = eventReader.lines()
                             .map(String::trim)
                             .filter(e -> !e.isEmpty())
+                            .filter(e -> !e.startsWith("@"))
                             .collect(Collectors.toList());
                     return parseScheduleEvents(events);
                 }
