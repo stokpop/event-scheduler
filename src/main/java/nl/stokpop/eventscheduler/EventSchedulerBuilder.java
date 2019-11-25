@@ -124,7 +124,7 @@ public class EventSchedulerBuilder {
                 .collect(Collectors.toList());
 
         EventBroadcaster broadcaster = eventBroadcaster == null
-                ? new EventBroadcasterDefault(events, logger)
+                ? new EventBroadcasterAsync(events, logger)
                 : eventBroadcaster;
 
         return new EventScheduler(testContext, eventSchedulerSettings, assertResultsEnabled,
@@ -142,8 +142,7 @@ public class EventSchedulerBuilder {
 
     private String removeFactoryPostfix(String factoryClassName) {
         int index = factoryClassName.indexOf("Factory");
-        String newName = index != -1 ? factoryClassName.substring(0, index) : factoryClassName;
-        return newName;
+        return index != -1 ? factoryClassName.substring(0, index) : factoryClassName;
     }
 
     private List<CustomEvent> generateCustomEventSchedule(TestContext context, String text, EventLogger logger, ClassLoader classLoader) {
@@ -244,7 +243,7 @@ public class EventSchedulerBuilder {
     }
 
     /**
-     * Optional. Default is probably good.
+     * Optional. Default is probably good: the async event broadcaster.
      * @param eventBroadcaster the broadcaster implementation to use
      */
     EventSchedulerBuilder setEventBroadcaster(EventBroadcaster eventBroadcaster) {

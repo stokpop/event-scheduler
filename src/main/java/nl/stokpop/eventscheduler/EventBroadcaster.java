@@ -34,4 +34,5 @@ public interface EventBroadcaster {
 
     List<EventCheck> broadcastCheck();
 
+    void shutdownAndWaitAllTasksDone(long timeoutSeconds);
 }

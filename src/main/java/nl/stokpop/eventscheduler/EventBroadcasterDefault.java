@@ -78,6 +78,11 @@ public class EventBroadcasterDefault implements EventBroadcaster {
         return events.stream().map(Event::check).collect(Collectors.toList());
     }
 
+    @Override
+    public void shutdownAndWaitAllTasksDone(long timeoutSeconds) {
+        logger.debug("shutdown broadcaster called, is noop in this implementation.");
+    }
+
     /**
      * Make sure events continue, even when exceptions are thrown.
      */

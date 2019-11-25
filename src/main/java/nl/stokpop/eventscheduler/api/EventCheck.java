@@ -15,6 +15,8 @@
  */
 package nl.stokpop.eventscheduler.api;
 
+import java.util.Objects;
+
 public class EventCheck {
 
     public static final EventCheck DEFAULT =
@@ -47,5 +49,28 @@ public class EventCheck {
 
     public String getMessage() {
         return message;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        EventCheck that = (EventCheck) o;
+        return Objects.equals(eventId, that.eventId) &&
+                eventStatus == that.eventStatus;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(eventId, eventStatus);
+    }
+
+    @Override
+    public String toString() {
+        return "EventCheck{" + "eventId='" + eventId + '\'' +
+                ", eventClassName='" + eventClassName + '\'' +
+                ", eventStatus=" + eventStatus +
+                ", message='" + message + '\'' +
+                '}';
     }
 }
