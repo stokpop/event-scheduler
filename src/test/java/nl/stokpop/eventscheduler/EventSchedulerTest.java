@@ -15,7 +15,16 @@
  */
 package nl.stokpop.eventscheduler;
 
-import nl.stokpop.eventscheduler.api.*;
+import nl.stokpop.eventscheduler.api.Event;
+import nl.stokpop.eventscheduler.api.EventCheck;
+import nl.stokpop.eventscheduler.api.EventFactory;
+import nl.stokpop.eventscheduler.api.EventLogger;
+import nl.stokpop.eventscheduler.api.EventProperties;
+import nl.stokpop.eventscheduler.api.EventSchedulerSettings;
+import nl.stokpop.eventscheduler.api.EventSchedulerSettingsBuilder;
+import nl.stokpop.eventscheduler.api.EventStatus;
+import nl.stokpop.eventscheduler.api.TestContext;
+import nl.stokpop.eventscheduler.api.TestContextBuilder;
 import nl.stokpop.eventscheduler.event.EventFactoryProvider;
 import nl.stokpop.eventscheduler.exception.EventCheckFailureException;
 import nl.stokpop.eventscheduler.log.EventLoggerStdOut;
@@ -27,9 +36,15 @@ import java.util.Collections;
 import java.util.Optional;
 import java.util.Properties;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.atMost;
+import static org.mockito.Mockito.ignoreStubs;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 /**
  * This test class is in same package to use the setEventFactoryProvider call.
@@ -40,7 +55,7 @@ public class EventSchedulerTest
     @Test
     public void createEventSchedulerAndFireSomeEventsWithFailures() {
 
-        EventLogger testLogger = EventLoggerStdOut.INSTANCE;
+        EventLogger testLogger = EventLoggerStdOut.INSTANCE_DEBUG;
 
         EventFactoryProvider provider = Mockito.mock(EventFactoryProvider.class);
         // to simulate event failures

@@ -20,7 +20,6 @@ import nl.stokpop.eventscheduler.api.EventFactory;
 import nl.stokpop.eventscheduler.api.EventLogger;
 import nl.stokpop.eventscheduler.api.EventProperties;
 import nl.stokpop.eventscheduler.api.TestContext;
-import nl.stokpop.eventscheduler.log.EventLoggerStdOut;
 
 public class EventFactoryDefault implements EventFactory {
 
@@ -36,7 +35,7 @@ public class EventFactoryDefault implements EventFactory {
 
     @Override
     public Event create(String eventName, TestContext context, EventProperties properties, EventLogger logger) {
-        return new EventDefault(eventName, context, properties, EventLoggerStdOut.INSTANCE);
+        return new EventDefault(eventName, context, properties, logger);
     }
 
     @Override

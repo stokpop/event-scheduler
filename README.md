@@ -62,7 +62,7 @@ Call when the load test starts.
 ### scheduler.afterTest()
 Call when the load test stops. 
 
-## Test Events
+## test events
 
 During a test run this Event Scheduler emits events. You can put
 your own implementation of the `EventFactory` and `Event` interface on the classpath
@@ -127,7 +127,7 @@ The setting will be send along with the event as well, for your own code to inte
 When no settings are present, like with de scale-down event in this example, the settings
 event will receive null for settings.
 
-## Use of events in maven plugin
+## maven plugin
 
 To use the events via the Gatling maven plugin the jar with the
 implementation details must be on the classpath of the plugin.
@@ -170,7 +170,7 @@ Note that the `eventFactory` element is mandatory, it defines the factory to use
 The `StokpopHelloEvent1` element is the name of the particular event created by the Factory and can be 
 any unique event name. The event name is used in the logging. 
 
-# custom event schedule generator
+# custom events generator
 
 To create your own event schedule you can implement your own
 `nl.stokpop.eventscheduler.api.EventGenerator` and `EventGeneratorFactory`.
@@ -193,7 +193,15 @@ You can use multiple lines for multiple properties.
 Properties that start with @-sign are so-called "meta" properties and
 should generally not be used as properties inside the implementation class.   
 
-## ClassLoaders
+## class loaders
 If classes are not available on the default classpath of the Thread, you can provide your
 own ClassLoader via `nl.stokpop.eventscheduler.api.EventSchedulerBuilder.build(java.lang.ClassLoader)`.
 Useful when running with Gradle instead of Maven.
+
+## event logging
+Two convenience logger implementations are provided for the `nl.stokpop.eventscheduler.api.EventLogger` interface.
+
+* `...log.EventLoggerStdOut.INSTANCE` logs to standard out (debug disabled)
+* `...log.EventLoggerStdOut.INSTANCE_DEBUG` logs to standard out (debug enabled)
+
+

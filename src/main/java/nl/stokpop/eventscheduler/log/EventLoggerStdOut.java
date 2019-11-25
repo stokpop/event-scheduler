@@ -22,9 +22,13 @@ import nl.stokpop.eventscheduler.api.EventLogger;
  */
 public final class EventLoggerStdOut implements EventLogger {
 
-    public static final EventLoggerStdOut INSTANCE = new EventLoggerStdOut();
+    public static final EventLoggerStdOut INSTANCE = new EventLoggerStdOut(false);
+    public static final EventLoggerStdOut INSTANCE_DEBUG = new EventLoggerStdOut(true);
 
-    private EventLoggerStdOut() {
+    private final boolean debug;
+
+    private EventLoggerStdOut(boolean debug) {
+        this.debug = debug;
     }
 
     @Override
@@ -49,7 +53,7 @@ public final class EventLoggerStdOut implements EventLogger {
 
     @Override
     public void debug(final String message) {
-        say("DEBUG", message);
+        if (debug) say("DEBUG", message);
     }
 
     private void say(String level, String something) {
