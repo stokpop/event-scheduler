@@ -9,7 +9,7 @@ plugins {
     id 'maven-publish'
     id 'signing'
     // check dependency updates: ./gradlew dependencyUpdates -Drevision=release
-    id 'com.github.ben-manes.versions' version '0.26.0'
+    id 'com.github.ben-manes.versions' version '0.27.0'
     id 'com.github.hierynomus.license' version '0.15.0'
     id 'io.codearte.nexus-staging' version '0.21.1'
 }
@@ -22,12 +22,12 @@ repositories {
 
 dependencies {
     implementation 'com.github.stephenc.jcip:jcip-annotations:1.0-1'
-    testImplementation 'junit:junit:4.12'
+    testImplementation 'junit:junit:4.13-rc-1'
     testImplementation 'org.mockito:mockito-core:3.1.0'
 }
 
 group = 'nl.stokpop'
-version = '2.0.0'
+version = '2.1.0-SNAPSHOT'
 description = 'event-scheduler'
 sourceCompatibility = '1.8'
 

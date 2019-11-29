@@ -18,10 +18,14 @@ package nl.stokpop.eventscheduler.api;
 import jdk.nashorn.internal.ir.annotations.Immutable;
 import nl.stokpop.eventscheduler.exception.EventSchedulerRuntimeException;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
 /**
@@ -30,11 +34,24 @@ import java.util.stream.Collectors;
  * One required property is the eventFactory property that should contain the fully qualified
  * class name of the factory class for the event.
  *
+ * Another optional property is "enabled", default is true.
+ * If set to false, the event will not be active.
+ *
  * This is an immutable class and makes an unmodifiable copy of the given Map.
  */
 @Immutable
 public class EventProperties {
-    public static final String FACTORY_CLASSNAME_KEY = "eventFactory";
+    public static final String PROP_FACTORY_CLASSNAME = "eventFactory";
+    public static final String PROP_EVENT_ENABLED = "enabled";
+
+    private static final List<String> DEFAULT_PROPERTIES;
+
+    static {
+        List<String> props = new ArrayList<>();
+        props.add(PROP_FACTORY_CLASSNAME);
+        props.add(PROP_EVENT_ENABLED);
+        DEFAULT_PROPERTIES = Collections.unmodifiableList(props);
+    }
 
     private Map<String, String> properties;
 
@@ -45,8 +62,8 @@ public class EventProperties {
 
     public EventProperties(Map<String,String> props) {
         properties = Collections.unmodifiableMap(new HashMap<>(props));
-        if (!properties.containsKey(FACTORY_CLASSNAME_KEY)) {
-            throw new EventSchedulerRuntimeException("The " + FACTORY_CLASSNAME_KEY + " property is missing, add it with value the fully" +
+        if (!properties.containsKey(PROP_FACTORY_CLASSNAME)) {
+            throw new EventSchedulerRuntimeException("The " + PROP_FACTORY_CLASSNAME + " property is missing, add it with value the fully" +
                     " qualified class name of the factory for the events.");
         }
     }
@@ -64,7 +81,24 @@ public class EventProperties {
     }
 
     public String getFactoryClassName() {
-        return properties.get(FACTORY_CLASSNAME_KEY);
+        return properties.get(PROP_FACTORY_CLASSNAME);
+    }
+
+    public boolean isEventEnabled() { return Boolean.parseBoolean(properties.getOrDefault(PROP_EVENT_ENABLED, "true")); }
+
+    public void checkUnknownProperties(Collection<String> allowedProperties,
+                                       BiConsumer<String, String> unknownPropertyAction) {
+        properties.entrySet().stream()
+                .filter(e -> !DEFAULT_PROPERTIES.contains(e.getKey()))
+                .filter(e -> !allowedProperties.contains(e.getKey()))
+                .forEach(e -> unknownPropertyAction.accept(e.getKey(), e.getValue()));
+    }
+
+    public boolean containsUnknownProperties(
+            Collection<String> allowedProperties) {
+        return properties.values().stream()
+                .filter(e -> !DEFAULT_PROPERTIES.contains(e))
+                .anyMatch(e -> !allowedProperties.contains(e));
     }
 
     public boolean isEmpty() {

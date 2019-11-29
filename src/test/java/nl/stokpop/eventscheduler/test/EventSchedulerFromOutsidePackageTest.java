@@ -17,7 +17,12 @@ package nl.stokpop.eventscheduler.test;
 
 import nl.stokpop.eventscheduler.EventScheduler;
 import nl.stokpop.eventscheduler.EventSchedulerBuilder;
-import nl.stokpop.eventscheduler.api.*;
+import nl.stokpop.eventscheduler.api.EventLogger;
+import nl.stokpop.eventscheduler.api.EventProperties;
+import nl.stokpop.eventscheduler.api.EventSchedulerSettings;
+import nl.stokpop.eventscheduler.api.EventSchedulerSettingsBuilder;
+import nl.stokpop.eventscheduler.api.TestContext;
+import nl.stokpop.eventscheduler.api.TestContextBuilder;
 import nl.stokpop.eventscheduler.log.EventLoggerStdOut;
 import org.junit.Test;
 
@@ -66,7 +71,7 @@ public class EventSchedulerFromOutsidePackageTest
         Properties properties = new Properties();
         properties.put("name", "value");
         // this class really needs to be on the classpath, otherwise: runtime exception, not found on classpath
-        properties.put(EventProperties.FACTORY_CLASSNAME_KEY, "nl.stokpop.eventscheduler.event.EventFactoryDefault");
+        properties.put(EventProperties.PROP_FACTORY_CLASSNAME, "nl.stokpop.eventscheduler.event.EventFactoryDefault");
 
         EventScheduler scheduler = new EventSchedulerBuilder()
                 .setEventSchedulerSettings(settings)

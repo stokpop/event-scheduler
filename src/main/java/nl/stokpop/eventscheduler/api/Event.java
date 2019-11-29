@@ -15,6 +15,9 @@
  */
 package nl.stokpop.eventscheduler.api;
 
+import java.util.Collection;
+import java.util.Collections;
+
 /**
  * This interface can be implemented in other jars and be put on the classpath.
  *
@@ -58,6 +61,7 @@ public interface Event {
     /**
      * Called to check test results (for example the requirements are checked).
      * Can be used to have a test run fail or succeed in continuous integration setups.
+     * @return even check that indicated a failed or successful run for this event.
      */
     EventCheck check();
 
@@ -67,5 +71,18 @@ public interface Event {
      */
     void customEvent(CustomEvent scheduleEvent);
 
+    /**
+     * @return collection of strings for all allowed properties
+     */
+    default Collection<String> allowedProperties() {
+        return Collections.emptyList();
+    }
+
+    /**
+     * @return collection of strings for all allowed custom events
+     */
+    default Collection<String> allowedCustomEvents() {
+        return Collections.emptyList();
+    }
 
 }

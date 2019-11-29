@@ -63,4 +63,9 @@ public class EventLoggerWithName implements EventLogger {
     public void debug(String message) {
         logger.debug(String.format("[%s] [%s] %s", name, classname, message));
     }
+
+    @Override
+    public boolean isDebugEnabled() {
+        return true;
+    }
 }

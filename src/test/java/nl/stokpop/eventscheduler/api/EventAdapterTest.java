@@ -15,13 +15,23 @@
  */
 package nl.stokpop.eventscheduler.api;
 
-public interface EventLogger {
+import org.junit.Test;
 
-    void info(String message);
-    void warn(String message);
-    void error(String message);
-    void error(String message, Throwable throwable);
-    void debug(String message);
-    boolean isDebugEnabled();
+import java.util.Set;
 
+import static org.junit.Assert.assertEquals;
+
+public class EventAdapterTest {
+
+    @Test
+    public void testSetOf() {
+        Set<String> items = EventAdapter.setOf("B", "B", "A");
+        // expect unique
+        assertEquals(2, items.size());
+        // expect order
+        String[] array = items.toArray(new String[0]);
+        assertEquals("A", array[0]);
+        assertEquals("B", array[1]);
+
+    }
 }

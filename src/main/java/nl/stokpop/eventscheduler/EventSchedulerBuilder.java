@@ -26,6 +26,7 @@ import nl.stokpop.eventscheduler.api.EventGeneratorProperties;
 import nl.stokpop.eventscheduler.api.EventLogger;
 import nl.stokpop.eventscheduler.api.EventProperties;
 import nl.stokpop.eventscheduler.api.EventSchedulerSettings;
+import nl.stokpop.eventscheduler.api.EventSchedulerSettingsBuilder;
 import nl.stokpop.eventscheduler.api.TestContext;
 import nl.stokpop.eventscheduler.event.EventFactoryProvider;
 import nl.stokpop.eventscheduler.exception.EventSchedulerRuntimeException;
@@ -35,6 +36,7 @@ import nl.stokpop.eventscheduler.generator.EventGeneratorFactoryProvider;
 import nl.stokpop.eventscheduler.log.EventLoggerDevNull;
 import nl.stokpop.eventscheduler.log.EventLoggerWithName;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -66,7 +68,7 @@ public class EventSchedulerBuilder {
 
     private EventFactoryProvider eventFactoryProvider;
 
-    private EventBroadcaster eventBroadcaster;
+    private EventBroadcasterFactory eventBroadcasterFactory;
 
     public EventSchedulerBuilder setTestContext(TestContext context) {
         this.testContext = context;
@@ -109,35 +111,56 @@ public class EventSchedulerBuilder {
             throw new EventSchedulerRuntimeException("TestContext must be set, it is null.");
         }
 
-        if (eventSchedulerSettings == null) {
-            throw new EventSchedulerRuntimeException("EventSchedulerSettings must be set, it is null.");
-        }
-
-        List<CustomEvent> customEvents = generateCustomEventSchedule(testContext, customEventsText, logger, classLoader);
+        EventSchedulerSettings myEventSchedulerSettings = eventSchedulerSettings == null
+                ? new EventSchedulerSettingsBuilder().build()
+                : eventSchedulerSettings;
+        
+        List<CustomEvent> customEvents =
+                generateCustomEventSchedule(testContext, customEventsText, logger, classLoader);
 
         EventFactoryProvider provider = eventFactoryProvider == null
                 ? EventFactoryProvider.createInstanceFromClasspath(classLoader)
                 : eventFactoryProvider;
 
+        eventInfos.stream()
+                .filter(e -> !e.getEventProperties().isEventEnabled())
+                .forEach(e -> logger.info("Event disabled: " + e.eventName));
+
         List<Event> events = eventInfos.stream()
+                .filter(e -> e.getEventProperties().isEventEnabled())
                 .map(p -> createEvent(provider, p, testContext))
                 .collect(Collectors.toList());
 
-        EventBroadcaster broadcaster = eventBroadcaster == null
-                ? new EventBroadcasterAsync(events, logger)
-                : eventBroadcaster;
+        EventBroadcasterFactory broadcasterFactory = eventBroadcasterFactory == null
+                ? EventBroadcasterAsync::new
+                : eventBroadcasterFactory;
 
-        return new EventScheduler(testContext, eventSchedulerSettings, assertResultsEnabled,
+        EventBroadcaster broadcaster = broadcasterFactory.create(events, logger);
+
+        return new EventScheduler(testContext, myEventSchedulerSettings, assertResultsEnabled,
                 broadcaster, eventProperties, customEvents, logger);
     }
 
     private Event createEvent(EventFactoryProvider provider, EventInfo eventInfo, TestContext testContext) {
-        String factoryClassName = eventInfo.getEventProperties().getFactoryClassName();
+        EventProperties eventProperties = eventInfo.getEventProperties();
+        String factoryClassName = eventProperties.getFactoryClassName();
         String eventName = eventInfo.getEventName();
         EventLogger eventLogger = new EventLoggerWithName(eventName, removeFactoryPostfix(factoryClassName), logger);
-        return provider.factoryByClassName(factoryClassName)
+
+        Event event = provider.factoryByClassName(factoryClassName)
                 .orElseThrow(() -> new RuntimeException(factoryClassName + " not found on classpath"))
-                .create(eventName, testContext, eventInfo.getEventProperties(), eventLogger);
+                .create(eventName, testContext, eventProperties, eventLogger);
+
+        Collection<String> allowedProperties = event.allowedProperties();
+        eventProperties.checkUnknownProperties(allowedProperties,
+                (key, value) -> eventLogger.warn(String.format("unknown property found: '%s' with value: '%s'. Choose from: %s", key, value, allowedProperties)));
+
+        if (logger.isDebugEnabled()) {
+            logger.debug("allowed properties: " + event.allowedProperties());
+            logger.debug("allowed events    : " + event.allowedCustomEvents());
+        }
+
+        return event;
     }
 
     private String removeFactoryPostfix(String factoryClassName) {
@@ -244,10 +267,10 @@ public class EventSchedulerBuilder {
 
     /**
      * Optional. Default is probably good: the async event broadcaster.
-     * @param eventBroadcaster the broadcaster implementation to use
+     * @param eventBroadcasterFactory the broadcaster implementation to use
      */
-    EventSchedulerBuilder setEventBroadcaster(EventBroadcaster eventBroadcaster) {
-        this.eventBroadcaster = eventBroadcaster;
+    EventSchedulerBuilder setEventBroadcasterFactory(EventBroadcasterFactory eventBroadcasterFactory) {
+        this.eventBroadcasterFactory = eventBroadcasterFactory;
         return this;
     }
 

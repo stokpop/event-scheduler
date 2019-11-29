@@ -15,6 +15,11 @@
  */
 package nl.stokpop.eventscheduler.api;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Set;
+import java.util.TreeSet;
+
 /**
  * Adapter class with empty method implementations of the Event interface.
  * Extend this class so you only have to implement the methods that are used.
@@ -68,6 +73,16 @@ public abstract class EventAdapter implements Event {
     @Override
     public final String getName() {
         return eventName;
+    }
+
+    /**
+     * Convenience method for the allowed properties or events.
+     * @param items the allowed props or events
+     * @return unmodifiable and ordered set of items
+     */
+    public static Set<String> setOf(String... items) {
+        // TreeSet is ordered
+        return Collections.unmodifiableSet(new TreeSet<>(Arrays.asList(items)));
     }
 
 }

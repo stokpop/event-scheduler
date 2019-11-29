@@ -35,6 +35,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Calls all events in an async manner to avoid the main broadcast thread
@@ -42,6 +43,7 @@ import java.util.stream.Collectors;
  */
 public class EventBroadcasterAsync implements EventBroadcaster {
 
+    protected static final int ALL_CALLS_TIME_OUT_SECONDS = 300;
     private final ExecutorService executor;
     private final List<Event> events;
     private final EventLogger logger;
@@ -60,22 +62,77 @@ public class EventBroadcasterAsync implements EventBroadcaster {
         this(events, null, null);
     }
 
+    /**
+     * The before test calls of all events will run in parallel, but this method will wait for
+     * all events to finish before returning.
+     *
+     * This is to make sure all needed activities before the test have finished before the
+     * test will start.
+     */
     @Override
     public void broadcastBeforeTest() {
         logger.info("broadcast before test event");
-        this.events.forEach(e -> CompletableFuture.runAsync(e::beforeTest, executor)
-                        .exceptionally(getWrappedError(e)));
+
+        CompletableFuture<?>[] cfs = this.events.stream()
+                .map(e -> CompletableFuture.runAsync(e::beforeTest, executor)
+                        .exceptionally(getWrappedError(e)))
+                .toArray(CompletableFuture<?>[]::new);
+
+        CompletableFuture<Void> allBeforeTests = CompletableFuture.allOf(cfs)
+                .exceptionally(t -> {
+                    logger.warn("There was an exception calling a before test: " + t.getMessage());
+                    return null;
+                });
+
+        // block until 'all before' tasks are finished, only then proceed to run test
+        try {
+            Void aVoid = allBeforeTests.get(ALL_CALLS_TIME_OUT_SECONDS, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            logger.warn("got interrupt waiting for all 'before test' calls to finish, " +
+                    "not all call may have been finished");
+        } catch (ExecutionException e) {
+            throw new EventSchedulerRuntimeException(
+                    "waiting for all 'before test' calls failed", e);
+        } catch (TimeoutException e) {
+            logger.warn("waited for " + ALL_CALLS_TIME_OUT_SECONDS + " seconds, got timeout waiting, " +
+                    "'before test' tasks might still be running?");
+        }
     }
 
-    private Function<Throwable, Void> getWrappedError(Event e) {
-        return t -> { logger.error("Event failure in " + e.getName(), t); throw new RuntimeException("Wrapped Error", t); };
-    }
-
+    /**
+     * The after test calls of all events will run in parallel, but this method will wait for
+     * all events to finish before returning.
+     *
+     * This is to make sure all needed activities after the test have finished before the
+     * test will finish.
+     */
     @Override
     public void broadcastAfterTest() {
         logger.info("broadcast after test event");
-        this.events.forEach(e -> CompletableFuture.runAsync(e::afterTest, executor)
-                .exceptionally(getWrappedError(e)));
+        
+        Stream<CompletableFuture<Void>> cfs = this.events.stream()
+                .map(e -> CompletableFuture.runAsync(e::afterTest, executor)
+                        .exceptionally(getWrappedError(e)));
+
+        CompletableFuture<Void> allAfterTests = CompletableFuture.allOf(cfs.toArray(CompletableFuture[]::new))
+                .exceptionally(t -> {
+                    logger.warn("There was an exception calling a before test: " + t.getMessage());
+                    return null;
+                });
+
+        // block until all 'after tests' tasks are finished, only then proceed to run test
+        try {
+            Void aVoid = allAfterTests.get(ALL_CALLS_TIME_OUT_SECONDS, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            logger.warn("got interrupt waiting for all 'after test' calls to finish, " +
+                    "not all call may have been finished");
+        } catch (ExecutionException e) {
+            throw new EventSchedulerRuntimeException(
+                    "waiting for all 'after test' calls failed", e);
+        } catch (TimeoutException e) {
+            logger.warn("waited for " + ALL_CALLS_TIME_OUT_SECONDS + " seconds, got timeout waiting, " +
+                    "'after test' tasks might still be running?");
+        }
     }
 
     @Override
@@ -85,11 +142,37 @@ public class EventBroadcasterAsync implements EventBroadcaster {
                 .exceptionally(getWrappedError(e)));
     }
 
+    /**
+     * Blocks for all abort tasks to be finished to try to make sure they get called
+     * before jvm shutdown.
+     */
     @Override
     public void broadcastAbortTest() {
         logger.debug("broadcast abort test event");
-        this.events.forEach(e -> CompletableFuture.runAsync(e::abortTest, executor)
-                .exceptionally(getWrappedError(e)));
+
+        Stream<CompletableFuture<Void>> cfs = this.events.stream()
+                .map(e -> CompletableFuture.runAsync(e::abortTest, executor)
+                        .exceptionally(getWrappedError(e)));
+
+        CompletableFuture<Void> allAbortTests = CompletableFuture.allOf(cfs.toArray(CompletableFuture[]::new))
+                .exceptionally(t -> {
+                    logger.warn("There was an exception calling an abort test: " + t.getMessage());
+                    return null;
+                });
+
+        // block until all 'abort tests' tasks are finished
+        try {
+            Void aVoid = allAbortTests.get(ALL_CALLS_TIME_OUT_SECONDS, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            logger.warn("got interrupt waiting for all 'abort test' calls to finish, " +
+                    "not all call may have been finished");
+        } catch (ExecutionException e) {
+            throw new EventSchedulerRuntimeException(
+                    "waiting for all 'abort test' calls failed", e);
+        } catch (TimeoutException e) {
+            logger.warn("waited for " + ALL_CALLS_TIME_OUT_SECONDS + " seconds, got timeout waiting, " +
+                    "'abort test' tasks might still be running?");
+        }
     }
 
     @Override
@@ -102,15 +185,17 @@ public class EventBroadcasterAsync implements EventBroadcaster {
     @Override
     public List<EventCheck> broadcastCheck() {
         logger.info("broadcast check test");
-        
+
         List<CompletableFuture<EventCheck>> eventChecks = events.stream()
                 .map(e -> CompletableFuture.supplyAsync(e::check, executor).exceptionally(getFailureEventCheck(e)))
                 .collect(Collectors.toList());
 
-        CompletableFuture[] cfs = eventChecks.toArray(new CompletableFuture[0]);
+        CompletableFuture<?>[] cfs = eventChecks.toArray(new CompletableFuture<?>[0]);
 
         CompletableFuture<Void> allEventChecks = CompletableFuture.allOf(cfs)
-                .exceptionally(t -> { throw new EventSchedulerRuntimeException("There was an exception getting an event check: " + t.getMessage()); } );
+                .exceptionally(t -> {
+                    throw new EventSchedulerRuntimeException(
+                            "There was an exception getting an event check: " + t.getMessage()); } );
 
         CompletableFuture<List<EventCheck>> listCompletableFuture = allEventChecks.thenApply(future ->
                 eventChecks.stream()
@@ -118,19 +203,11 @@ public class EventBroadcasterAsync implements EventBroadcaster {
                         .collect(Collectors.toList()));
 
         try {
-            return listCompletableFuture.get(120, TimeUnit.SECONDS);
+            return listCompletableFuture.get(ALL_CALLS_TIME_OUT_SECONDS, TimeUnit.SECONDS);
         } catch (InterruptedException | ExecutionException | TimeoutException e) {
             throw new EventSchedulerRuntimeException("get event checks error", e);
         }
 
-    }
-
-    private Function<Throwable, EventCheck> getFailureEventCheck(Event e) {
-        return t -> {
-            EventCheck eventCheck = new EventCheck(e.getName(), e.getClass().getSimpleName(), EventStatus.FAILURE, "Failed to produce an event check! " + t.getMessage());
-            logger.error("Error during check: " + eventCheck, t);
-            return eventCheck;
-        };
     }
 
     @Override
@@ -149,4 +226,18 @@ public class EventBroadcasterAsync implements EventBroadcaster {
         logger.info("shutdown broadcaster done.");
     }
 
+    private Function<Throwable, EventCheck> getFailureEventCheck(Event e) {
+        return t -> {
+            EventCheck eventCheck = new EventCheck(e.getName(), e.getClass().getSimpleName(), EventStatus.FAILURE, "Failed to produce an event check! " + t.getMessage());
+            logger.error("Error during check: " + eventCheck, t);
+            return eventCheck;
+        };
+    }
+
+    private Function<Throwable, Void> getWrappedError(Event e) {
+        return t -> {
+            logger.error("Event failure in " + e.getName(), t);
+            throw new RuntimeException("Wrapped Error: " + t.getMessage(), t);
+        };
+    }
 }

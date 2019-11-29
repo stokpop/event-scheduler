@@ -52,4 +52,9 @@ public final class EventLoggerDevNull implements EventLogger {
 
     }
 
+    @Override
+    public boolean isDebugEnabled() {
+        return false;
+    }
+
 }

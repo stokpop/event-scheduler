@@ -86,6 +86,9 @@ public final class EventScheduler {
         logger.info("All broadcasts for stop test session are done");
     }
 
+    /**
+     * @return true when stop or abort has been called.
+     */
     public boolean isSessionStopped() {
         return isSessionStopped;
     }

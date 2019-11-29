@@ -20,14 +20,14 @@ import nl.stokpop.eventscheduler.api.EventLogger;
 /**
  * Logs to standard out for convenience. Add your own logger preferably where possible.
  */
-public final class EventLoggerStdOut implements EventLogger {
+public class EventLoggerStdOut implements EventLogger {
 
     public static final EventLoggerStdOut INSTANCE = new EventLoggerStdOut(false);
     public static final EventLoggerStdOut INSTANCE_DEBUG = new EventLoggerStdOut(true);
 
     private final boolean debug;
 
-    private EventLoggerStdOut(boolean debug) {
+    protected EventLoggerStdOut(boolean debug) {
         this.debug = debug;
     }
 
@@ -54,6 +54,11 @@ public final class EventLoggerStdOut implements EventLogger {
     @Override
     public void debug(final String message) {
         if (debug) say("DEBUG", message);
+    }
+
+    @Override
+    public boolean isDebugEnabled() {
+        return debug;
     }
 
     private void say(String level, String something) {

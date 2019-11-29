@@ -35,6 +35,7 @@ import java.time.Duration;
 import java.util.Collections;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -96,7 +97,7 @@ public class EventSchedulerTest
 
         Properties properties = new Properties();
         properties.put("name", "value");
-        properties.put(EventProperties.FACTORY_CLASSNAME_KEY, "nl.stokpop.eventscheduler.event.EventFactoryDefault");
+        properties.put(EventProperties.PROP_FACTORY_CLASSNAME, "nl.stokpop.eventscheduler.event.EventFactoryDefault");
 
         EventScheduler scheduler = new EventSchedulerBuilder()
                 .setEventSchedulerSettings(settings)
@@ -133,6 +134,9 @@ public class EventSchedulerTest
         Mockito.verify(event, times(3)).afterTest();
         // this seems a timing issue if they are called or not, they are called in ide test, not in gradle test all
         Mockito.verify(event, atMost(3)).keepAlive();
+        // in debug mode called 6 times instead of 3
+        Mockito.verify(event, atMost(6)).allowedProperties();
+        Mockito.verify(event, atMost(6)).allowedCustomEvents();
 
         verifyNoMoreInteractions(ignoreStubs(provider));
         verifyNoMoreInteractions(ignoreStubs(event));
@@ -182,6 +186,67 @@ public class EventSchedulerTest
                         .build();
 
         assertNotNull(settings);
+    }
+
+    @Test
+    public void createWithDisabledEvent() {
+
+        TestContext context = new TestContextBuilder().build();
+
+        Properties propertiesEnabled1 = new Properties();
+        propertiesEnabled1.setProperty(EventProperties.PROP_EVENT_ENABLED, "true");
+        propertiesEnabled1.put(EventProperties.PROP_FACTORY_CLASSNAME, "nl.stokpop.eventscheduler.event.EventFactoryDefault");
+
+        Properties propertiesEnabled2 = new Properties();
+        propertiesEnabled2.put(EventProperties.PROP_FACTORY_CLASSNAME, "nl.stokpop.eventscheduler.event.EventFactoryDefault");
+
+        Properties propertiesDisabled = new Properties();
+        propertiesDisabled.setProperty(EventProperties.PROP_EVENT_ENABLED, "false");
+        propertiesDisabled.put(EventProperties.PROP_FACTORY_CLASSNAME, "nl.stokpop.eventscheduler.event.EventFactoryDefault");
+
+
+        AtomicInteger countInfoMessages = new AtomicInteger();
+
+        EventLogger eventLogger = new EventLoggerStdOut(true) {
+            @Override
+            public void info(String message) {
+                super.info(message);
+                if (message.contains("Before test:")) {
+                    countInfoMessages.incrementAndGet();
+                }
+            }
+        };
+
+        EventScheduler scheduler = new EventSchedulerBuilder()
+                // avoid timing issues: do not use the default async broadcaster
+                .setEventBroadcasterFactory(EventBroadcasterDefault::new)
+                .setTestContext(context)
+                .setLogger(eventLogger)
+                .setAssertResultsEnabled(true)
+                .addEvent("eventEnabled1", propertiesEnabled1)
+                .addEvent("eventEnabled2", propertiesEnabled2)
+                .addEvent("eventDisabled", propertiesDisabled)
+                .build();
+
+        // expect "before test" event called for 2 enabled instances
+        scheduler.startSession();
+
+        assertEquals(2, countInfoMessages.get());
+
+    }
+
+    @Test
+    public void createWithUnknownProperty()  {
+        Properties properties = new Properties();
+        properties.setProperty(EventProperties.PROP_EVENT_ENABLED, "true");
+        properties.put(EventProperties.PROP_FACTORY_CLASSNAME, "nl.stokpop.eventscheduler.event.EventFactoryDefault");
+        properties.setProperty("unknown", "bar");
+
+        EventScheduler scheduler = new EventSchedulerBuilder()
+                .setTestContext(new TestContextBuilder().build())
+                .addEvent("myEvent", properties)
+                .setLogger(EventLoggerStdOut.INSTANCE_DEBUG)
+                .build();
     }
 
 }

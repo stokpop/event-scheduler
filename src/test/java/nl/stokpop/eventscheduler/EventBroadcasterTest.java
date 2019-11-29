@@ -117,6 +117,8 @@ public class EventBroadcasterTest {
 
         EventBroadcaster broadcaster = new EventBroadcasterAsync(events, EventLoggerStdOut.INSTANCE);
         long startTime = System.currentTimeMillis();
+        // blocks to wait for results, but this should not take longer
+        // than the longest wait time of a task
         broadcaster.broadcastBeforeTest();
         long durationMillis = System.currentTimeMillis() - startTime;
 
@@ -200,7 +202,7 @@ public class EventBroadcasterTest {
             logger.info(System.currentTimeMillis() + " Sleep in before test error in thread: " + Thread.currentThread().getName());
             sleep(200);
             logger.info(System.currentTimeMillis() + " After sleep in test error in thread: " + Thread.currentThread().getName());
-            throw new RuntimeException("oops, something went wrong!");
+            throw new RuntimeException("oops, something went wrong in before test!");
         }
 
         @Override
@@ -208,7 +210,7 @@ public class EventBroadcasterTest {
             logger.info(System.currentTimeMillis() + " Sleep in error check in thread: " + Thread.currentThread().getName());
             sleep(500);
             logger.error(System.currentTimeMillis() + " After sleep in error check in thread: " + Thread.currentThread().getName());
-            throw new RuntimeException("oops, something went wrong!");
+            throw new RuntimeException("oops, something went wrong in check!");
         }
     }
 

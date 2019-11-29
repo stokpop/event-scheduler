@@ -139,7 +139,7 @@ For example:
 ```xml 
 <plugin>
     <groupId>nl.stokpop</groupId>
-    <artifactId>gatling-maven-plugin-events</artifactId>
+    <artifactId>events-gatling-maven-plugin</artifactId>
     <configuration>
         <simulationClass>afterburner.AfterburnerBasicSimulation</simulationClass>
         <eventScheduleScript>
@@ -148,19 +148,19 @@ For example:
             PT10M45S|heapdump|server=myserver.example.com;port=1567
             PT15M|scale-up|{ replicas:2 }
         </eventScheduleScript>
-        <eventProperties>
+        <events>
             <StokpopHelloEvent1>
                 <eventFactory>nl.stokpop.event.StokpopHelloEventFactory</eventFactory>
                 <myRestServer>https://my-rest-api</myName>
                 <myCredentials>${ENV.SECRET}</myCredentials>
             </StokpopHelloEvent1>
-        </eventProperties>
+        </events>
     </configuration>
     <dependencies>
         <dependency>
             <groupId>nl.stokpop</groupId>
-            <artifactId>hello-world-events</artifactId>
-            <version>1.0.0</version>
+            <artifactId>test-events-hello-world</artifactId>
+            <version>1.0.1</version>
         </dependency>
     </dependencies>
 </plugin>

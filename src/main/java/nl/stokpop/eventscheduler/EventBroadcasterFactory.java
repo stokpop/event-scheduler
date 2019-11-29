@@ -13,15 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nl.stokpop.eventscheduler.api;
+package nl.stokpop.eventscheduler;
 
-public interface EventLogger {
+import nl.stokpop.eventscheduler.api.Event;
+import nl.stokpop.eventscheduler.api.EventLogger;
 
-    void info(String message);
-    void warn(String message);
-    void error(String message);
-    void error(String message, Throwable throwable);
-    void debug(String message);
-    boolean isDebugEnabled();
+import java.util.Collection;
 
+public interface EventBroadcasterFactory {
+    EventBroadcaster create(Collection<Event> event, EventLogger logger);
 }
