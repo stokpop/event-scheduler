@@ -15,12 +15,9 @@
  */
 package nl.stokpop.eventscheduler;
 
-import nl.stokpop.eventscheduler.api.EventLogger;
-import nl.stokpop.eventscheduler.api.EventSchedulerSettings;
-import nl.stokpop.eventscheduler.api.TestContext;
-import nl.stokpop.eventscheduler.api.CustomEvent;
-import nl.stokpop.eventscheduler.api.EventProperties;
+import nl.stokpop.eventscheduler.api.*;
 import nl.stokpop.eventscheduler.exception.EventSchedulerRuntimeException;
+import nl.stokpop.eventscheduler.exception.KillSwitchException;
 
 import java.util.List;
 import java.util.concurrent.Executors;
@@ -43,7 +40,7 @@ class EventSchedulerEngine {
         this.logger = logger;
     }
 
-    void startKeepAliveThread(TestContext context, EventSchedulerSettings settings, EventBroadcaster broadcaster, EventProperties eventProperties) {
+    void startKeepAliveThread(TestContext context, EventSchedulerSettings settings, EventBroadcaster broadcaster, EventProperties eventProperties, KillSwitchCallback killSwitchCallback) {
         nullChecks(context, broadcaster, eventProperties);
 
         if (executorKeepAlive != null) {
@@ -54,7 +51,7 @@ class EventSchedulerEngine {
 
         executorKeepAlive = createKeepAliveScheduler();
         
-        KeepAliveRunner keepAliveRunner = new KeepAliveRunner(context, broadcaster, eventProperties);
+        KeepAliveRunner keepAliveRunner = new KeepAliveRunner(context, broadcaster, eventProperties, killSwitchCallback);
         executorKeepAlive.scheduleAtFixedRate(keepAliveRunner, 0, settings.getKeepAliveDuration().getSeconds(), TimeUnit.SECONDS);
     }
 
@@ -83,10 +80,10 @@ class EventSchedulerEngine {
             List<Runnable> runnables = executorCustomEvents.shutdownNow();
             if (runnables.size() > 0) {
                 if (runnables.size() == 1) {
-                    logger.warn("there is 1 custom event that is not (fully) executed!");
+                    logger.warn("There is 1 custom event that is not (fully) executed!");
                 }
                 else {
-                    logger.warn("there are " + runnables.size() + " custom events that are not (fully) executed!");
+                    logger.warn("There are " + runnables.size() + " custom events that are not (fully) executed!");
                 }
             }
         }
@@ -143,11 +140,13 @@ class EventSchedulerEngine {
         private final TestContext context;
         private final EventBroadcaster broadcaster;
         private final EventProperties eventProperties;
+        private final KillSwitchCallback killSwitchCallback;
 
-        KeepAliveRunner(TestContext context, EventBroadcaster broadcaster, EventProperties eventProperties) {
+        KeepAliveRunner(TestContext context, EventBroadcaster broadcaster, EventProperties eventProperties, KillSwitchCallback killSwitchCallback) {
             this.context = context;
             this.broadcaster = broadcaster;
             this.eventProperties = eventProperties;
+            this.killSwitchCallback = killSwitchCallback;
         }
 
         @Override
@@ -155,6 +154,8 @@ class EventSchedulerEngine {
             // TODO make recurring calls also part of the generic EventGenerators
             try {
                 broadcaster.broadcastKeepAlive();
+            } catch (KillSwitchException e) {
+                if (killSwitchCallback != null) killSwitchCallback.kill();
             } catch (Exception e) {
                 logger.error("Broadcast keep-alive failed", e);
             }

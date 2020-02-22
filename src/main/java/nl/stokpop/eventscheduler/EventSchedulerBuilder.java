@@ -17,17 +17,7 @@ package nl.stokpop.eventscheduler;
 
 import jdk.nashorn.internal.ir.annotations.Immutable;
 import net.jcip.annotations.NotThreadSafe;
-import nl.stokpop.eventscheduler.api.CustomEvent;
-import nl.stokpop.eventscheduler.api.Event;
-import nl.stokpop.eventscheduler.api.EventGenerator;
-import nl.stokpop.eventscheduler.api.EventGeneratorFactory;
-import nl.stokpop.eventscheduler.api.EventGeneratorMetaProperty;
-import nl.stokpop.eventscheduler.api.EventGeneratorProperties;
-import nl.stokpop.eventscheduler.api.EventLogger;
-import nl.stokpop.eventscheduler.api.EventProperties;
-import nl.stokpop.eventscheduler.api.EventSchedulerSettings;
-import nl.stokpop.eventscheduler.api.EventSchedulerSettingsBuilder;
-import nl.stokpop.eventscheduler.api.TestContext;
+import nl.stokpop.eventscheduler.api.*;
 import nl.stokpop.eventscheduler.event.EventFactoryProvider;
 import nl.stokpop.eventscheduler.exception.EventSchedulerRuntimeException;
 import nl.stokpop.eventscheduler.generator.EventGeneratorDefault;
@@ -36,14 +26,7 @@ import nl.stokpop.eventscheduler.generator.EventGeneratorFactoryProvider;
 import nl.stokpop.eventscheduler.log.EventLoggerDevNull;
 import nl.stokpop.eventscheduler.log.EventLoggerWithName;
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Properties;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -70,6 +53,12 @@ public class EventSchedulerBuilder {
 
     private EventBroadcasterFactory eventBroadcasterFactory;
 
+    private KillSwitchCallback killSwitchCallback;
+
+    public EventSchedulerBuilder setKillSwitchCallback(KillSwitchCallback callback) {
+        this.killSwitchCallback = callback;
+        return this;
+    }
     public EventSchedulerBuilder setTestContext(TestContext context) {
         this.testContext = context;
         return this;
@@ -138,7 +127,7 @@ public class EventSchedulerBuilder {
         EventBroadcaster broadcaster = broadcasterFactory.create(events, logger);
 
         return new EventScheduler(testContext, myEventSchedulerSettings, assertResultsEnabled,
-                broadcaster, eventProperties, customEvents, logger);
+                broadcaster, eventProperties, customEvents, logger, killSwitchCallback);
     }
 
     private Event createEvent(EventFactoryProvider provider, EventInfo eventInfo, TestContext testContext) {

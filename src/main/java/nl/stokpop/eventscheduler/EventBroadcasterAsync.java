@@ -15,24 +15,13 @@
  */
 package nl.stokpop.eventscheduler;
 
-import nl.stokpop.eventscheduler.api.CustomEvent;
-import nl.stokpop.eventscheduler.api.Event;
-import nl.stokpop.eventscheduler.api.EventCheck;
-import nl.stokpop.eventscheduler.api.EventLogger;
-import nl.stokpop.eventscheduler.api.EventStatus;
+import nl.stokpop.eventscheduler.api.*;
 import nl.stokpop.eventscheduler.exception.EventSchedulerRuntimeException;
+import nl.stokpop.eventscheduler.exception.KillSwitchException;
 import nl.stokpop.eventscheduler.log.EventLoggerDevNull;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.*;
+import java.util.concurrent.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -75,7 +64,7 @@ public class EventBroadcasterAsync implements EventBroadcaster {
 
         CompletableFuture<?>[] cfs = this.events.stream()
                 .map(e -> CompletableFuture.runAsync(e::beforeTest, executor)
-                        .exceptionally(getWrappedError(e)))
+                        .exceptionally(printError(e)))
                 .toArray(CompletableFuture<?>[]::new);
 
         CompletableFuture<Void> allBeforeTests = CompletableFuture.allOf(cfs)
@@ -112,7 +101,7 @@ public class EventBroadcasterAsync implements EventBroadcaster {
         
         Stream<CompletableFuture<Void>> cfs = this.events.stream()
                 .map(e -> CompletableFuture.runAsync(e::afterTest, executor)
-                        .exceptionally(getWrappedError(e)));
+                        .exceptionally(printError(e)));
 
         CompletableFuture<Void> allAfterTests = CompletableFuture.allOf(cfs.toArray(CompletableFuture[]::new))
                 .exceptionally(t -> {
@@ -138,8 +127,37 @@ public class EventBroadcasterAsync implements EventBroadcaster {
     @Override
     public void broadcastKeepAlive() {
         logger.debug("broadcast keep alive event");
-        this.events.forEach(e -> CompletableFuture.runAsync(e::keepAlive, executor)
-                .exceptionally(getWrappedError(e)));
+
+        List<Throwable> exceptions = Collections.synchronizedList(new ArrayList<>());
+
+        Stream<CompletableFuture<Void>> cfs = this.events.stream()
+                .map(e -> CompletableFuture.runAsync(e::keepAlive, executor)
+                        .exceptionally(printError(e, exceptions)));
+
+        CompletableFuture<Void> allKeepAlives = CompletableFuture.allOf(cfs.toArray(CompletableFuture[]::new));
+
+        // block until all 'keep alive' tasks are finished, then check if KillSwitchException is present
+        try {
+            Void aVoid = allKeepAlives.get(ALL_CALLS_TIME_OUT_SECONDS, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            logger.warn("got interrupt waiting for all 'keep alive' calls to finish, " +
+                    "not all call may have been finished");
+        } catch (ExecutionException e) {
+            throw new EventSchedulerRuntimeException(
+                    "waiting for all 'keep alive' calls failed", e);
+        } catch (TimeoutException e) {
+            logger.warn("waited for " + ALL_CALLS_TIME_OUT_SECONDS + " seconds, got timeout waiting for " +
+                    "'keep alive' tasks");
+        }
+
+        logger.info("Keep Alive found exceptions: " + exceptions);
+        Optional<Throwable> killSwitch = exceptions.stream()
+                .filter(t -> t instanceof KillSwitchException)
+                .findFirst();
+
+        if (killSwitch.isPresent()) {
+            throw new KillSwitchException("From keep alive broadcast: " + killSwitch.get().getMessage());
+        }
     }
 
     /**
@@ -152,7 +170,7 @@ public class EventBroadcasterAsync implements EventBroadcaster {
 
         Stream<CompletableFuture<Void>> cfs = this.events.stream()
                 .map(e -> CompletableFuture.runAsync(e::abortTest, executor)
-                        .exceptionally(getWrappedError(e)));
+                        .exceptionally(printError(e)));
 
         CompletableFuture<Void> allAbortTests = CompletableFuture.allOf(cfs.toArray(CompletableFuture[]::new))
                 .exceptionally(t -> {
@@ -179,7 +197,7 @@ public class EventBroadcasterAsync implements EventBroadcaster {
     public void broadcastCustomEvent(CustomEvent scheduleEvent) {
         logger.info("broadcast " + scheduleEvent.getName() + " custom event");
         this.events.forEach(e -> CompletableFuture.runAsync(() -> e.customEvent(scheduleEvent), executor)
-                .exceptionally(getWrappedError(e)));
+                .exceptionally(printError(e)));
     }
 
     @Override
@@ -234,10 +252,25 @@ public class EventBroadcasterAsync implements EventBroadcaster {
         };
     }
 
-    private Function<Throwable, Void> getWrappedError(Event e) {
+    private Function<Throwable, Void> printError(Event e, List<Throwable> errors) {
         return t -> {
-            logger.error("Event failure in " + e.getName(), t);
-            throw new RuntimeException("Wrapped Error: " + t.getMessage(), t);
+            // t is CompletionException, so get inner cause
+            Throwable cause = t.getCause();
+            if (cause instanceof KillSwitchException) {
+                logger.warn(String.format("KillSwitch requested from event '%s'", e.getName()));
+            }
+            else {
+                logger.error(String.format("Event failure in '%s'", e.getName()), cause);
+            }
+            if (errors != null) {
+                errors.add(cause);
+            }
+            return null;
         };
     }
+
+    private Function<Throwable, Void> printError(Event e) {
+        return printError(e, null);
+    }
+
 }

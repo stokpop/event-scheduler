@@ -15,14 +15,8 @@
  */
 package nl.stokpop.eventscheduler;
 
-import nl.stokpop.eventscheduler.api.CustomEvent;
-import nl.stokpop.eventscheduler.api.Event;
-import nl.stokpop.eventscheduler.api.EventAdapter;
-import nl.stokpop.eventscheduler.api.EventCheck;
-import nl.stokpop.eventscheduler.api.EventProperties;
-import nl.stokpop.eventscheduler.api.EventStatus;
-import nl.stokpop.eventscheduler.api.TestContext;
-import nl.stokpop.eventscheduler.api.TestContextBuilder;
+import nl.stokpop.eventscheduler.api.*;
+import nl.stokpop.eventscheduler.exception.KillSwitchException;
 import nl.stokpop.eventscheduler.log.EventLoggerStdOut;
 import org.junit.Test;
 
@@ -149,6 +143,18 @@ public class EventBroadcasterTest {
         broadcaster.shutdownAndWaitAllTasksDone(2);
     }
 
+    @Test(expected = KillSwitchException.class)
+    public void broadcastKeepAliveWithKillSwitchException() {
+        // what happens when an event throws a KillSwitchException?
+        List<Event> events = createKillSwitchTestEvents();
+
+        EventBroadcaster broadcaster = new EventBroadcasterAsync(events, EventLoggerStdOut.INSTANCE);
+
+        broadcaster.broadcastKeepAlive();
+
+        broadcaster.shutdownAndWaitAllTasksDone(2);
+    }
+
     private List<Event> createTestEvents() {
         MySleepyEvent sleepyEvent1 = new MySleepyEvent("sleepy1");
         MySleepyEvent sleepyEvent2 = new MySleepyEvent("sleepy2");
@@ -160,6 +166,16 @@ public class EventBroadcasterTest {
         events.add(sleepyEvent2);
         events.add(sleepyEvent3);
         events.add(errorEvent);
+        return events;
+    }
+
+    private List<Event> createKillSwitchTestEvents() {
+        MyKillSwitchEvent killSwitchEvent1 = new MyKillSwitchEvent("no-killer");
+        MyKillSwitchEvent killSwitchEvent2 = new MyKillSwitchEvent("killer-one");
+
+        List<Event> events = new ArrayList<>();
+        events.add(killSwitchEvent1);
+        events.add(killSwitchEvent2);
         return events;
     }
 
@@ -185,6 +201,24 @@ public class EventBroadcasterTest {
             sleep(500);
             logger.error(System.currentTimeMillis() + " After sleep in check in thread: " + Thread.currentThread().getName());
              return new EventCheck(eventName, getClass().getSimpleName(), EventStatus.SUCCESS, "All ok");
+        }
+    }
+
+    private static class MyKillSwitchEvent extends EventAdapter {
+        // just because it is needed...
+        private final static TestContext testContext = new TestContextBuilder().build();
+        private final static EventProperties eventProperties = new EventProperties();
+
+        public MyKillSwitchEvent(String eventName) {
+            super(eventName, testContext, eventProperties, EventLoggerStdOut.INSTANCE_DEBUG);
+        }
+
+        @Override
+        public void keepAlive() {
+            logger.info("keep alive called for " + eventName);
+            if (eventName.startsWith("killer")) {
+                throw new KillSwitchException("kill switch in action from " + eventName);
+            }
         }
     }
 

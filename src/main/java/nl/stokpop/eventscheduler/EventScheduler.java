@@ -15,13 +15,7 @@
  */
 package nl.stokpop.eventscheduler;
 
-import nl.stokpop.eventscheduler.api.CustomEvent;
-import nl.stokpop.eventscheduler.api.EventCheck;
-import nl.stokpop.eventscheduler.api.EventLogger;
-import nl.stokpop.eventscheduler.api.EventProperties;
-import nl.stokpop.eventscheduler.api.EventSchedulerSettings;
-import nl.stokpop.eventscheduler.api.EventStatus;
-import nl.stokpop.eventscheduler.api.TestContext;
+import nl.stokpop.eventscheduler.api.*;
 import nl.stokpop.eventscheduler.exception.EventCheckFailureException;
 
 import java.util.List;
@@ -39,6 +33,7 @@ public final class EventScheduler {
     private final EventBroadcaster broadcaster;
     private final EventProperties eventProperties;
     private final List<CustomEvent> scheduleEvents;
+    private KillSwitchCallback killSwitchCallback;
 
     private EventSchedulerEngine executorEngine;
 
@@ -47,7 +42,7 @@ public final class EventScheduler {
     EventScheduler(TestContext context, EventSchedulerSettings settings,
                    boolean checkResultsEnabled, EventBroadcaster broadcaster,
                    EventProperties eventProperties,
-                   List<CustomEvent> scheduleEvents, EventLogger logger) {
+                   List<CustomEvent> scheduleEvents, EventLogger logger, KillSwitchCallback killSwitchCallback) {
         this.context = context;
         this.settings = settings;
         this.checkResultsEnabled = checkResultsEnabled;
@@ -56,8 +51,12 @@ public final class EventScheduler {
         this.scheduleEvents = scheduleEvents;
         this.logger = logger;
         this.executorEngine = new EventSchedulerEngine(logger);
+        this.killSwitchCallback = killSwitchCallback;
     }
 
+    public void addKillSwitch(KillSwitchCallback killSwitchCallback) {
+        this.killSwitchCallback = killSwitchCallback;
+    }
     /**
      * Start a test session.
      */
@@ -67,7 +66,7 @@ public final class EventScheduler {
         
         broadcaster.broadcastBeforeTest();
 
-        executorEngine.startKeepAliveThread(context, settings, broadcaster, eventProperties);
+        executorEngine.startKeepAliveThread(context, settings, broadcaster, eventProperties, killSwitchCallback);
         executorEngine.startCustomEventScheduler(context, scheduleEvents, broadcaster, eventProperties);
 
     }
