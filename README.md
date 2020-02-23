@@ -10,7 +10,7 @@ Create a an EventScheduler using the builders:
 
 ```java
 EventSchedulerSettings settings = new EventSchedulerSettingsBuilder()
-        .setKeepAliveInterval(Duration.ofMinutes(2))
+        .setKeepAliveInterval(Duration.ofSeconds(30))
         .build();
 
 TestContext context = new TestContextBuilder()
@@ -71,7 +71,7 @@ and add your own code to these events.
 Events triggers available, with example usage:
 * _before test_ - use to restart servers or setup/cleanup environment
 * _after test_ - start generating reports, clean up environment
-* _keep alive calls_ - send calls to any remote API for instance
+* _keep alive calls_ - send keep alive calls to any remote API 
 * _check result_ - after a test check results for the event, if failures are present the CI build can fail 
 * _abort test_ - abort a running test, do not run to end
 * _custom events_ - any event you can define in the event scheduler, e.g. failover, increase stub delay times or scale-down events 
@@ -204,4 +204,12 @@ Two convenience logger implementations are provided for the `nl.stokpop.eventsch
 * `...log.EventLoggerStdOut.INSTANCE` logs to standard out (debug disabled)
 * `...log.EventLoggerStdOut.INSTANCE_DEBUG` logs to standard out (debug enabled)
 
+## kill switch
+
+The keep-alive call can receive data from remote systems and decide to throw a `KillSwitchException` based
+on that data. If a `KillSwitchException` is thrown and passed on to the user of the event-scheduler, running
+tests can be aborted based on the received data. 
+
+An example is that the analysis tool in use discovers too high response times and decides to kill the
+running test.
 
