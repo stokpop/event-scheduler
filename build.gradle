@@ -1,4 +1,3 @@
-import org.gradle.api.plugins.internal.DefaultJavaPluginExtension
 import org.gradle.internal.os.OperatingSystem
 
 import java.time.Duration
@@ -54,7 +53,7 @@ license {
     exclude "src/main/resources/META-INF/services/*"
     mapping {
         // the standard java style makes intellij complain about dangling javadoc
-        java = "SLASHSTAR_STYLE" as DefaultJavaPluginExtension
+        java = "SLASHSTAR_STYLE"
     }
 }
 
