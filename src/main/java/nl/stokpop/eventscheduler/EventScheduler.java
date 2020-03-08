@@ -33,7 +33,7 @@ public final class EventScheduler {
     private final EventBroadcaster broadcaster;
     private final EventProperties eventProperties;
     private final List<CustomEvent> scheduleEvents;
-    private KillSwitchCallback killSwitchCallback;
+    private KillSwitchHandler killSwitchHandler;
 
     private EventSchedulerEngine executorEngine;
 
@@ -42,7 +42,7 @@ public final class EventScheduler {
     EventScheduler(TestContext context, EventSchedulerSettings settings,
                    boolean checkResultsEnabled, EventBroadcaster broadcaster,
                    EventProperties eventProperties,
-                   List<CustomEvent> scheduleEvents, EventLogger logger, KillSwitchCallback killSwitchCallback) {
+                   List<CustomEvent> scheduleEvents, EventLogger logger, KillSwitchHandler killSwitchHandler) {
         this.context = context;
         this.settings = settings;
         this.checkResultsEnabled = checkResultsEnabled;
@@ -51,11 +51,11 @@ public final class EventScheduler {
         this.scheduleEvents = scheduleEvents;
         this.logger = logger;
         this.executorEngine = new EventSchedulerEngine(logger);
-        this.killSwitchCallback = killSwitchCallback;
+        this.killSwitchHandler = killSwitchHandler;
     }
 
-    public void addKillSwitch(KillSwitchCallback killSwitchCallback) {
-        this.killSwitchCallback = killSwitchCallback;
+    public void addKillSwitch(KillSwitchHandler killSwitchHandler) {
+        this.killSwitchHandler = killSwitchHandler;
     }
     /**
      * Start a test session.
@@ -66,7 +66,7 @@ public final class EventScheduler {
         
         broadcaster.broadcastBeforeTest();
 
-        executorEngine.startKeepAliveThread(context, settings, broadcaster, eventProperties, killSwitchCallback);
+        executorEngine.startKeepAliveThread(context, settings, broadcaster, eventProperties, killSwitchHandler);
         executorEngine.startCustomEventScheduler(context, scheduleEvents, broadcaster, eventProperties);
 
     }
@@ -96,7 +96,7 @@ public final class EventScheduler {
      * Call to abort this test run.
      */
     public void abortSession() {
-        logger.warn("Test session abort called.");
+        logger.info("Test session abort called.");
         isSessionStopped = true;
 
         broadcaster.broadcastAbortTest();
@@ -109,11 +109,13 @@ public final class EventScheduler {
      * @throws EventCheckFailureException when there are events that report failures
      */
     public void checkResults() throws EventCheckFailureException {
-        logger.info("Test session abort called.");
+        logger.info("Check results called.");
 
         List<EventCheck> eventChecks = broadcaster.broadcastCheck();
 
         boolean success = eventChecks.stream().allMatch(e -> e.getEventStatus() != EventStatus.FAILURE);
+
+        logger.debug("Checked " + eventChecks.size() + " event checks. All success: " + success);
 
         if (!success) {
             String failureMessage = eventChecks.stream()
@@ -122,17 +124,19 @@ public final class EventScheduler {
                     .collect(Collectors.joining(", "));
             String message = String.format("Event checks with failures found: [%s]", failureMessage);
             if (checkResultsEnabled) {
+                logger.info("One or more event checks reported a failure: " + message);
                 throw new EventCheckFailureException(message);
             }
             else {
-                logger.warn(String.format("CheckResultsEnabled is false, not throwing EventCheckFailureException with message: %s", message));
+                logger.warn("CheckResultsEnabled is false, not throwing EventCheckFailureException with message: " + message);
             }
         }
     }
 
     @Override
     public String toString() {
-        return String.format("EventScheduler [testRunId:%s testType:%s testEnv:%s]",
-                context.getTestRunId(), context.getTestType(), context.getTestEnvironment());
+        return "EventScheduler [testRunId:" + context.getTestRunId()
+            + " testType:" + context.getTestType()
+            + " testEnv:" + context.getTestEnvironment() + "]";
     }
 }

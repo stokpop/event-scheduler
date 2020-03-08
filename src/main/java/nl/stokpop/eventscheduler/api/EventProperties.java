@@ -15,16 +15,10 @@
  */
 package nl.stokpop.eventscheduler.api;
 
-import jdk.nashorn.internal.ir.annotations.Immutable;
+import net.jcip.annotations.Immutable;
 import nl.stokpop.eventscheduler.exception.EventSchedulerRuntimeException;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
+import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 

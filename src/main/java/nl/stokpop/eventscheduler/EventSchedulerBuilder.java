@@ -15,7 +15,7 @@
  */
 package nl.stokpop.eventscheduler;
 
-import jdk.nashorn.internal.ir.annotations.Immutable;
+import net.jcip.annotations.Immutable;
 import net.jcip.annotations.NotThreadSafe;
 import nl.stokpop.eventscheduler.api.*;
 import nl.stokpop.eventscheduler.event.EventFactoryProvider;
@@ -53,10 +53,10 @@ public class EventSchedulerBuilder {
 
     private EventBroadcasterFactory eventBroadcasterFactory;
 
-    private KillSwitchCallback killSwitchCallback;
+    private KillSwitchHandler killSwitchHandler;
 
-    public EventSchedulerBuilder setKillSwitchCallback(KillSwitchCallback callback) {
-        this.killSwitchCallback = callback;
+    public EventSchedulerBuilder setKillSwitchHandler(KillSwitchHandler callback) {
+        this.killSwitchHandler = callback;
         return this;
     }
     public EventSchedulerBuilder setTestContext(TestContext context) {
@@ -127,7 +127,7 @@ public class EventSchedulerBuilder {
         EventBroadcaster broadcaster = broadcasterFactory.create(events, logger);
 
         return new EventScheduler(testContext, myEventSchedulerSettings, assertResultsEnabled,
-                broadcaster, eventProperties, customEvents, logger, killSwitchCallback);
+                broadcaster, eventProperties, customEvents, logger, killSwitchHandler);
     }
 
     private Event createEvent(EventFactoryProvider provider, EventInfo eventInfo, TestContext testContext) {

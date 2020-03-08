@@ -40,7 +40,7 @@ class EventSchedulerEngine {
         this.logger = logger;
     }
 
-    void startKeepAliveThread(TestContext context, EventSchedulerSettings settings, EventBroadcaster broadcaster, EventProperties eventProperties, KillSwitchCallback killSwitchCallback) {
+    void startKeepAliveThread(TestContext context, EventSchedulerSettings settings, EventBroadcaster broadcaster, EventProperties eventProperties, KillSwitchHandler killSwitchHandler) {
         nullChecks(context, broadcaster, eventProperties);
 
         if (executorKeepAlive != null) {
@@ -51,7 +51,7 @@ class EventSchedulerEngine {
 
         executorKeepAlive = createKeepAliveScheduler();
         
-        KeepAliveRunner keepAliveRunner = new KeepAliveRunner(context, broadcaster, eventProperties, killSwitchCallback);
+        KeepAliveRunner keepAliveRunner = new KeepAliveRunner(context, broadcaster, eventProperties, killSwitchHandler);
         executorKeepAlive.scheduleAtFixedRate(keepAliveRunner, 0, settings.getKeepAliveDuration().getSeconds(), TimeUnit.SECONDS);
     }
 
@@ -140,26 +140,31 @@ class EventSchedulerEngine {
         private final TestContext context;
         private final EventBroadcaster broadcaster;
         private final EventProperties eventProperties;
-        private final KillSwitchCallback killSwitchCallback;
+        private final KillSwitchHandler killSwitchHandler;
 
-        KeepAliveRunner(TestContext context, EventBroadcaster broadcaster, EventProperties eventProperties, KillSwitchCallback killSwitchCallback) {
+        KeepAliveRunner(TestContext context, EventBroadcaster broadcaster, EventProperties eventProperties, KillSwitchHandler killSwitchHandler) {
             this.context = context;
             this.broadcaster = broadcaster;
             this.eventProperties = eventProperties;
-            this.killSwitchCallback = killSwitchCallback;
+            this.killSwitchHandler = killSwitchHandler;
         }
 
         @Override
         public void run() {
-            // TODO make recurring calls also part of the generic EventGenerators
             try {
                 broadcaster.broadcastKeepAlive();
             } catch (KillSwitchException e) {
-                if (killSwitchCallback != null) killSwitchCallback.kill();
+                String message = e.getMessage();
+                if (killSwitchHandler != null) {
+                    logger.info("KillSwitchException found, invoke KillSwitchHandler: " + message);
+                    killSwitchHandler.kill(e.getMessage());
+                }
+                else {
+                    logger.warn("KillSwitchException was thrown, but no KillSwitchHandler is present. Message: " + message);
+                }
             } catch (Exception e) {
                 logger.error("Broadcast keep-alive failed", e);
             }
-
         }
 
         @Override

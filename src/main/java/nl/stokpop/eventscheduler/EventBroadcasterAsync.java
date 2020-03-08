@@ -150,13 +150,13 @@ public class EventBroadcasterAsync implements EventBroadcaster {
                     "'keep alive' tasks");
         }
 
-        logger.info("Keep Alive found exceptions: " + exceptions);
+        logger.debug("Keep Alive found exceptions: " + exceptions);
         Optional<Throwable> killSwitch = exceptions.stream()
                 .filter(t -> t instanceof KillSwitchException)
                 .findFirst();
 
         if (killSwitch.isPresent()) {
-            throw new KillSwitchException("From keep alive broadcast: " + killSwitch.get().getMessage());
+            throw new KillSwitchException("Found kill switch request during keep-alive broadcast: " + killSwitch.get().getMessage());
         }
     }
 
@@ -257,10 +257,10 @@ public class EventBroadcasterAsync implements EventBroadcaster {
             // t is CompletionException, so get inner cause
             Throwable cause = t.getCause();
             if (cause instanceof KillSwitchException) {
-                logger.warn(String.format("KillSwitch requested from event '%s'", e.getName()));
+                logger.debug("KillSwitch requested from event '" + e.getName() + "'");
             }
             else {
-                logger.error(String.format("Event failure in '%s'", e.getName()), cause);
+                logger.error("Event failure in '" + e.getName() + "'", cause);
             }
             if (errors != null) {
                 errors.add(cause);

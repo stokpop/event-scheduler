@@ -15,14 +15,10 @@
  */
 package nl.stokpop.eventscheduler.api;
 
-import jdk.nashorn.internal.ir.annotations.Immutable;
+import net.jcip.annotations.Immutable;
 
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Information for a (performance) test run.

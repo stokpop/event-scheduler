@@ -56,7 +56,7 @@ public class EventBroadcasterDefault implements EventBroadcaster {
     }
 
     @Override
-    public void broadcastKeepAlive() throws KillSwitchException{
+    public void broadcastKeepAlive() throws KillSwitchException {
         logger.debug("broadcast keep alive event");
         events.forEach(catchExceptionWrapper(Event::keepAlive));
     }

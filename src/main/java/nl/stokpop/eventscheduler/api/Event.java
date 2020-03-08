@@ -21,10 +21,10 @@ import java.util.Collections;
 /**
  * This interface can be implemented in other jars and be put on the classpath.
  *
- * Provide a file in META-INF/services/nl.stokpop.eventscheduler.api.Event that contains the
- * fully qualified name of the implementing class.
+ * Provide a file in META-INF/services/nl.stokpop.eventscheduler.api.EventFactory that contains the
+ * fully qualified name of the factory for a specific event implementation.
  *
- * This class will be used when these events are called. Possibly you can even provide multiple implementations
+ * This class will be used when these events are called. You can provide multiple implementations
  * on the classpath that will all be called.
  *
  * For more information on how this technically works, check out javadoc of java.util.ServiceLoader.

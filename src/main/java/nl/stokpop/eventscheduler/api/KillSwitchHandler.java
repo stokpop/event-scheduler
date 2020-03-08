@@ -15,6 +15,10 @@
  */
 package nl.stokpop.eventscheduler.api;
 
-public interface KillSwitchCallback {
-    void kill();
+/**
+ * When an event throws a KillSwitchException, the KillSwitchHandler will
+ * also be called.
+ */
+public interface KillSwitchHandler {
+    void kill(String killMessage);
 }

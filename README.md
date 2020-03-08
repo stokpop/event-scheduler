@@ -172,11 +172,12 @@ any unique event name. The event name is used in the logging.
 
 # custom events generator
 
-To create your own event schedule you can implement your own
-`nl.stokpop.eventscheduler.api.EventGenerator` and `EventGeneratorFactory`.
+Create your own event by implementing the `nl.stokpop.eventscheduler.api.EventFactory` interface.
 
-And add the following generator-class and settings to the customEvents tag
-of the Gatling or jMeter plugin (instead of a verbatim list of events).
+Create your own event generator by implementing the `nl.stokpop.eventscheduler.api.EventGeneratorFactory` interface.
+
+Add the `@generatorFactoryClass` and settings to the `customEvents` tag to have
+an eventSchedule generated instead of an explicit list of timestamps and events.
 
 ```xml
 <customEvents>
@@ -191,7 +192,8 @@ The `foo=bar` is an example of properties for the event generator.
 You can use multiple lines for multiple properties.
 
 Properties that start with @-sign are so-called "meta" properties and
-should generally not be used as properties inside the implementation class.   
+should propertieds with @-sign should preferably not be used as custom properties
+inside the implementation class.   
 
 ## class loaders
 If classes are not available on the default classpath of the Thread, you can provide your
@@ -212,4 +214,3 @@ tests can be aborted based on the received data.
 
 An example is that the analysis tool in use discovers too high response times and decides to kill the
 running test.
-
