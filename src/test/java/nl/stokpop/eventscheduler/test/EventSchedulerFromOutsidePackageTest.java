@@ -17,12 +17,7 @@ package nl.stokpop.eventscheduler.test;
 
 import nl.stokpop.eventscheduler.EventScheduler;
 import nl.stokpop.eventscheduler.EventSchedulerBuilder;
-import nl.stokpop.eventscheduler.api.EventLogger;
-import nl.stokpop.eventscheduler.api.EventProperties;
-import nl.stokpop.eventscheduler.api.EventSchedulerSettings;
-import nl.stokpop.eventscheduler.api.EventSchedulerSettingsBuilder;
-import nl.stokpop.eventscheduler.api.TestContext;
-import nl.stokpop.eventscheduler.api.TestContextBuilder;
+import nl.stokpop.eventscheduler.api.*;
 import nl.stokpop.eventscheduler.log.EventLoggerStdOut;
 import org.junit.Test;
 
@@ -56,11 +51,11 @@ public class EventSchedulerFromOutsidePackageTest
                 .build();
 
         TestContext context = new TestContextBuilder()
-                .setTestType("testType")
-                .setTestEnvironment("testEnv")
+                .setWorkload("testType")
+                .setEnvironment("testEnv")
                 .setTestRunId("testRunId")
                 .setCIBuildResultsUrl("http://url")
-                .setApplicationRelease("release")
+                .setVersion("release")
                 .setRampupTimeInSeconds("10")
                 .setConstantLoadTimeInSeconds("300")
                 .setAnnotations("annotation")

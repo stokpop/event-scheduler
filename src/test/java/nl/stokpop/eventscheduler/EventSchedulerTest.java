@@ -15,16 +15,7 @@
  */
 package nl.stokpop.eventscheduler;
 
-import nl.stokpop.eventscheduler.api.Event;
-import nl.stokpop.eventscheduler.api.EventCheck;
-import nl.stokpop.eventscheduler.api.EventFactory;
-import nl.stokpop.eventscheduler.api.EventLogger;
-import nl.stokpop.eventscheduler.api.EventProperties;
-import nl.stokpop.eventscheduler.api.EventSchedulerSettings;
-import nl.stokpop.eventscheduler.api.EventSchedulerSettingsBuilder;
-import nl.stokpop.eventscheduler.api.EventStatus;
-import nl.stokpop.eventscheduler.api.TestContext;
-import nl.stokpop.eventscheduler.api.TestContextBuilder;
+import nl.stokpop.eventscheduler.api.*;
 import nl.stokpop.eventscheduler.event.EventFactoryProvider;
 import nl.stokpop.eventscheduler.exception.EventCheckFailureException;
 import nl.stokpop.eventscheduler.log.EventLoggerStdOut;
@@ -37,15 +28,9 @@ import java.util.Optional;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.atMost;
-import static org.mockito.Mockito.ignoreStubs;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.*;
 
 /**
  * This test class is in same package to use the setEventFactoryProvider call.
@@ -83,11 +68,11 @@ public class EventSchedulerTest
                 .build();
 
         TestContext context = new TestContextBuilder()
-                .setTestType("testType")
-                .setTestEnvironment("testEnv")
+                .setWorkload("testType")
+                .setEnvironment("testEnv")
                 .setTestRunId("testRunId")
                 .setCIBuildResultsUrl("http://url")
-                .setApplicationRelease("release")
+                .setVersion("version")
                 .setRampupTimeInSeconds("10")
                 .setConstantLoadTimeInSeconds("300")
                 .setAnnotations("annotation")
@@ -152,16 +137,16 @@ public class EventSchedulerTest
 
         TestContext context = new TestContextBuilder()
                 .setAnnotations(null)
-                .setApplicationRelease(null)
-                .setApplication(null)
+                .setVersion(null)
+                .setSystemUnderTest(null)
                 .setCIBuildResultsUrl(null)
                 .setConstantLoadTimeInSeconds(null)
                 .setConstantLoadTime(null)
                 .setRampupTimeInSeconds(null)
                 .setRampupTime(null)
-                .setTestEnvironment(null)
+                .setEnvironment(null)
                 .setTestRunId(null)
-                .setTestType(null)
+                .setWorkload(null)
                 .setVariables((Properties)null)
                 .setTags((String)null)
                 .build();

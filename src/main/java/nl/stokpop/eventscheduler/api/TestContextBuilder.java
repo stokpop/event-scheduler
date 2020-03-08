@@ -21,7 +21,10 @@ import nl.stokpop.eventscheduler.EventSchedulerUtils;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
 import java.util.stream.Collectors;
 
 @NotThreadSafe
@@ -32,34 +35,34 @@ public class TestContextBuilder {
     private static DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("YYYY-MM-dd'T'HH-mm-ss");
 
     private String annotations = "";
-    private String application = "unknown";
-    private String testType = "unknown";
-    private String testEnvironment = "unknown";
+    private String systemUnderTest = "unknown";
+    private String workload = "unknown";
+    private String environment = "unknown";
     private String testRunId = "unknown_" + dateTimeFormatter.format(LocalDateTime.now());
     private String ciBuildResultsUrl = "unknown";
-    private String applicationRelease = "unknown";
+    private String version = "unknown";
     private Duration rampupTime = Duration.ofSeconds(DEFAULT_RAMPUP_TIME_SECONDS);
     private Duration constantLoadTime = Duration.ofSeconds(DEFAULT_CONSTANT_LOAD_TIME_SECONDS);
     private Map<String, String> variables = Collections.emptyMap();
     private List<String> tags = Collections.emptyList();
 
-    public TestContextBuilder setApplication(String application) {
-        if (EventSchedulerUtils.hasValue(application)) {
-            this.application = application;
+    public TestContextBuilder setSystemUnderTest(String systemUnderTest) {
+        if (EventSchedulerUtils.hasValue(systemUnderTest)) {
+            this.systemUnderTest = systemUnderTest;
         }
         return this;
     }
 
-    public TestContextBuilder setTestType(String testType) {
-        if (EventSchedulerUtils.hasValue(testType)) {
-            this.testType = testType;
+    public TestContextBuilder setWorkload(String workload) {
+        if (EventSchedulerUtils.hasValue(workload)) {
+            this.workload = workload;
         }
         return this;
     }
 
-    public TestContextBuilder setTestEnvironment(String testEnvironment) {
-        if (EventSchedulerUtils.hasValue(testEnvironment)) {
-            this.testEnvironment = testEnvironment;
+    public TestContextBuilder setEnvironment(String environment) {
+        if (EventSchedulerUtils.hasValue(environment)) {
+            this.environment = environment;
         }
         return this;
     }
@@ -78,9 +81,9 @@ public class TestContextBuilder {
         return this;
     }
 
-    public TestContextBuilder setApplicationRelease(String applicationRelease) {
-        if (EventSchedulerUtils.hasValue(applicationRelease)) {
-            this.applicationRelease = applicationRelease;
+    public TestContextBuilder setVersion(String version) {
+        if (EventSchedulerUtils.hasValue(version)) {
+            this.version = version;
         }
         return this;
     }
@@ -130,7 +133,7 @@ public class TestContextBuilder {
     }
 
     public TestContext build() {
-        return new TestContext(application, testType, testEnvironment, testRunId, ciBuildResultsUrl, applicationRelease, rampupTime, constantLoadTime, annotations, variables, tags);
+        return new TestContext(systemUnderTest, workload, environment, testRunId, ciBuildResultsUrl, version, rampupTime, constantLoadTime, annotations, variables, tags);
     }
 
     public TestContextBuilder setRampupTimeInSeconds(String rampupTimeSeconds) {

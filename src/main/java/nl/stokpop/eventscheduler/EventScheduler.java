@@ -136,7 +136,7 @@ public final class EventScheduler {
     @Override
     public String toString() {
         return "EventScheduler [testRunId:" + context.getTestRunId()
-            + " testType:" + context.getTestType()
-            + " testEnv:" + context.getTestEnvironment() + "]";
+            + " testType:" + context.getWorkload()
+            + " testEnv:" + context.getEnvironment() + "]";
     }
 }
