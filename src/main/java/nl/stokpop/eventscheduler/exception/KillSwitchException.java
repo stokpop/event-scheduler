@@ -15,6 +15,13 @@
  */
 package nl.stokpop.eventscheduler.exception;
 
+/**
+ * An event can throw KillSwitchException to stop the
+ * running test and trigger the registered kill handlers.
+ *
+ * Use in case a scheduler run should be stopped but results should
+ * still be processed.
+ */
 public class KillSwitchException extends RuntimeException {
     public KillSwitchException(String message) {
         super(message);

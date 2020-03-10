@@ -16,6 +16,7 @@
 package nl.stokpop.eventscheduler;
 
 import nl.stokpop.eventscheduler.api.*;
+import nl.stokpop.eventscheduler.exception.AbortSchedulerException;
 import nl.stokpop.eventscheduler.exception.EventSchedulerRuntimeException;
 import nl.stokpop.eventscheduler.exception.KillSwitchException;
 import nl.stokpop.eventscheduler.log.EventLoggerDevNull;
@@ -128,7 +129,7 @@ public class EventBroadcasterAsync implements EventBroadcaster {
     public void broadcastKeepAlive() {
         logger.debug("broadcast keep alive event");
 
-        List<Throwable> exceptions = Collections.synchronizedList(new ArrayList<>());
+        Queue<Throwable> exceptions = new ConcurrentLinkedQueue<>();
 
         Stream<CompletableFuture<Void>> cfs = this.events.stream()
                 .map(e -> CompletableFuture.runAsync(e::keepAlive, executor)
@@ -149,15 +150,8 @@ public class EventBroadcasterAsync implements EventBroadcaster {
             logger.warn("waited for " + ALL_CALLS_TIME_OUT_SECONDS + " seconds, got timeout waiting for " +
                     "'keep alive' tasks");
         }
-
         logger.debug("Keep Alive found exceptions: " + exceptions);
-        Optional<Throwable> killSwitch = exceptions.stream()
-                .filter(t -> t instanceof KillSwitchException)
-                .findFirst();
-
-        if (killSwitch.isPresent()) {
-            throw new KillSwitchException("Found kill switch request during keep-alive broadcast: " + killSwitch.get().getMessage());
-        }
+        throwAbortOrKillWitchException(exceptions);
     }
 
     /**
@@ -252,12 +246,15 @@ public class EventBroadcasterAsync implements EventBroadcaster {
         };
     }
 
-    private Function<Throwable, Void> printError(Event e, List<Throwable> errors) {
+    private Function<Throwable, Void> printError(Event e, Queue<Throwable> errors) {
         return t -> {
             // t is CompletionException, so get inner cause
             Throwable cause = t.getCause();
             if (cause instanceof KillSwitchException) {
                 logger.debug("KillSwitch requested from event '" + e.getName() + "'");
+            }
+            else if (cause instanceof AbortSchedulerException) {
+                logger.debug("AbortScheduler requested from event '" + e.getName() + "'");
             }
             else {
                 logger.error("Event failure in '" + e.getName() + "'", cause);

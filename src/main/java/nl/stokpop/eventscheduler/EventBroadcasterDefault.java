@@ -19,13 +19,12 @@ import nl.stokpop.eventscheduler.api.CustomEvent;
 import nl.stokpop.eventscheduler.api.Event;
 import nl.stokpop.eventscheduler.api.EventCheck;
 import nl.stokpop.eventscheduler.api.EventLogger;
+import nl.stokpop.eventscheduler.exception.AbortSchedulerException;
 import nl.stokpop.eventscheduler.exception.KillSwitchException;
 import nl.stokpop.eventscheduler.log.EventLoggerDevNull;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -56,9 +55,12 @@ public class EventBroadcasterDefault implements EventBroadcaster {
     }
 
     @Override
-    public void broadcastKeepAlive() throws KillSwitchException {
+    public void broadcastKeepAlive() throws KillSwitchException, AbortSchedulerException {
         logger.debug("broadcast keep alive event");
-        events.forEach(catchExceptionWrapper(Event::keepAlive));
+        Queue<Throwable> exceptions = new ConcurrentLinkedQueue<>();
+        events.forEach(catchExceptionWrapper(Event::keepAlive, exceptions));
+        logger.debug("Keep Alive found exceptions: " + exceptions);
+        throwAbortOrKillWitchException(exceptions);
     }
 
     @Override
@@ -70,6 +72,7 @@ public class EventBroadcasterDefault implements EventBroadcaster {
     @Override
     public void broadcastCustomEvent(CustomEvent scheduleEvent) {
         logger.info("broadcast " + scheduleEvent.getName() + " custom event");
+        List<Exception> errors = new ArrayList<>();
         events.forEach(catchExceptionWrapper(event -> event.customEvent(scheduleEvent)));
     }
 
@@ -85,21 +88,34 @@ public class EventBroadcasterDefault implements EventBroadcaster {
     }
 
     /**
-     * Make sure events continue, even when exceptions are thrown, except when kill switch is requested.
+     * Make sure events continue, even when exceptions are thrown, except when kill switch or abort is requested.
      */
-    private Consumer<Event> catchExceptionWrapper(Consumer<Event> consumer) throws KillSwitchException {
+    private Consumer<Event> catchExceptionWrapper(Consumer<Event> consumer) throws KillSwitchException, AbortSchedulerException {
+        return catchExceptionWrapper(consumer, null);
+    }
+
+    /**
+     * Make sure events continue, even when exceptions are thrown.
+     * All exceptions are added to the queue.
+     */
+    private Consumer<Event> catchExceptionWrapper(Consumer<Event> consumer, Queue<Throwable> errors) {
         return event -> {
             try {
                 consumer.accept(event);
-            } catch (KillSwitchException e) {
-                throw e;
+            } catch (KillSwitchException | AbortSchedulerException e) {
+                if (errors != null) {
+                    errors.add(e);
+                }
             } catch (Exception e) {
-                String message = String.format("exception in event (%s)", event.getName());
+                String message = "exception in event (" + event.getName() + ")";
                 if (logger != null) {
                     logger.error(message, e);
                 }
                 else {
-                    System.err.printf("(note: better provide a logger): %s %s", message, e.getMessage());
+                    System.err.printf("exception found (note: better provide a logger): %s %s", message, e.getMessage());
+                }
+                if (errors != null) {
+                    errors.add(e);
                 }
             }
         };

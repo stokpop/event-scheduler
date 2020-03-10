@@ -16,6 +16,7 @@
 package nl.stokpop.eventscheduler;
 
 import nl.stokpop.eventscheduler.api.*;
+import nl.stokpop.eventscheduler.exception.AbortSchedulerException;
 import nl.stokpop.eventscheduler.exception.KillSwitchException;
 import nl.stokpop.eventscheduler.log.EventLoggerStdOut;
 import org.junit.Test;
@@ -144,11 +145,45 @@ public class EventBroadcasterTest {
     }
 
     @Test(expected = KillSwitchException.class)
-    public void broadcastKeepAliveWithKillSwitchException() {
+    public void broadcastKeepAliveWithKillSwitchExceptionAsync() {
         // what happens when an event throws a KillSwitchException?
         List<Event> events = createKillSwitchTestEvents();
 
         EventBroadcaster broadcaster = new EventBroadcasterAsync(events, EventLoggerStdOut.INSTANCE);
+
+        broadcaster.broadcastKeepAlive();
+
+        broadcaster.shutdownAndWaitAllTasksDone(2);
+    }
+
+    @Test(expected = KillSwitchException.class)
+    public void broadcastKeepAliveWithKillSwitchExceptionDefault() {
+        // what happens when an event throws a KillSwitchException?
+        List<Event> events = createKillSwitchTestEvents();
+
+        EventBroadcaster broadcaster = new EventBroadcasterDefault(events, EventLoggerStdOut.INSTANCE);
+
+        broadcaster.broadcastKeepAlive();
+
+        broadcaster.shutdownAndWaitAllTasksDone(2);
+    }
+
+    @Test(expected = AbortSchedulerException.class)
+    public void broadcastKeepAliveWithAbortSchedulerExceptionAsync() {
+        List<Event> events = createKillSwitchAndAbortTestEvents();
+
+        EventBroadcaster broadcaster = new EventBroadcasterAsync(events, EventLoggerStdOut.INSTANCE);
+
+        broadcaster.broadcastKeepAlive();
+
+        broadcaster.shutdownAndWaitAllTasksDone(2);
+    }
+
+    @Test(expected = AbortSchedulerException.class)
+    public void broadcastKeepAliveWithAbortSchedulerExceptionDefault() {
+        List<Event> events = createKillSwitchAndAbortTestEvents();
+
+        EventBroadcaster broadcaster = new EventBroadcasterDefault(events, EventLoggerStdOut.INSTANCE);
 
         broadcaster.broadcastKeepAlive();
 
@@ -176,6 +211,18 @@ public class EventBroadcasterTest {
         List<Event> events = new ArrayList<>();
         events.add(killSwitchEvent1);
         events.add(killSwitchEvent2);
+        return events;
+    }
+
+    private List<Event> createKillSwitchAndAbortTestEvents() {
+        MyKillSwitchEvent killSwitchEvent1 = new MyKillSwitchEvent("no-killer");
+        MyKillSwitchEvent killSwitchEvent2 = new MyKillSwitchEvent("killer-one");
+        MyKillSwitchEvent killSwitchEvent3 = new MyKillSwitchEvent("abort-one");
+
+        List<Event> events = new ArrayList<>();
+        events.add(killSwitchEvent1);
+        events.add(killSwitchEvent2);
+        events.add(killSwitchEvent3);
         return events;
     }
 
@@ -217,7 +264,10 @@ public class EventBroadcasterTest {
         public void keepAlive() {
             logger.info("keep alive called for " + eventName);
             if (eventName.startsWith("killer")) {
-                throw new KillSwitchException("kill switch in action from " + eventName);
+                throw new KillSwitchException("kill switch requested from " + eventName);
+            }
+            if (eventName.startsWith("abort")) {
+                throw new AbortSchedulerException("abort scheduler requested from " + eventName);
             }
         }
     }

@@ -53,10 +53,10 @@ public class EventSchedulerBuilder {
 
     private EventBroadcasterFactory eventBroadcasterFactory;
 
-    private KillSwitchHandler killSwitchHandler;
+    private SchedulerExceptionHandler schedulerExceptionHandler;
 
-    public EventSchedulerBuilder setKillSwitchHandler(KillSwitchHandler callback) {
-        this.killSwitchHandler = callback;
+    public EventSchedulerBuilder setSchedulerExceptionHandler(SchedulerExceptionHandler callback) {
+        this.schedulerExceptionHandler = callback;
         return this;
     }
     public EventSchedulerBuilder setTestContext(TestContext context) {
@@ -127,7 +127,7 @@ public class EventSchedulerBuilder {
         EventBroadcaster broadcaster = broadcasterFactory.create(events, logger);
 
         return new EventScheduler(testContext, myEventSchedulerSettings, assertResultsEnabled,
-                broadcaster, eventProperties, customEvents, logger, killSwitchHandler);
+                broadcaster, eventProperties, customEvents, logger, schedulerExceptionHandler);
     }
 
     private Event createEvent(EventFactoryProvider provider, EventInfo eventInfo, TestContext testContext) {

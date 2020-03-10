@@ -33,7 +33,7 @@ public final class EventScheduler {
     private final EventBroadcaster broadcaster;
     private final EventProperties eventProperties;
     private final List<CustomEvent> scheduleEvents;
-    private KillSwitchHandler killSwitchHandler;
+    private SchedulerExceptionHandler schedulerExceptionHandler;
 
     private EventSchedulerEngine executorEngine;
 
@@ -42,7 +42,7 @@ public final class EventScheduler {
     EventScheduler(TestContext context, EventSchedulerSettings settings,
                    boolean checkResultsEnabled, EventBroadcaster broadcaster,
                    EventProperties eventProperties,
-                   List<CustomEvent> scheduleEvents, EventLogger logger, KillSwitchHandler killSwitchHandler) {
+                   List<CustomEvent> scheduleEvents, EventLogger logger, SchedulerExceptionHandler schedulerExceptionHandler) {
         this.context = context;
         this.settings = settings;
         this.checkResultsEnabled = checkResultsEnabled;
@@ -51,11 +51,11 @@ public final class EventScheduler {
         this.scheduleEvents = scheduleEvents;
         this.logger = logger;
         this.executorEngine = new EventSchedulerEngine(logger);
-        this.killSwitchHandler = killSwitchHandler;
+        this.schedulerExceptionHandler = schedulerExceptionHandler;
     }
 
-    public void addKillSwitch(KillSwitchHandler killSwitchHandler) {
-        this.killSwitchHandler = killSwitchHandler;
+    public void addKillSwitch(SchedulerExceptionHandler schedulerExceptionHandler) {
+        this.schedulerExceptionHandler = schedulerExceptionHandler;
     }
     /**
      * Start a test session.
@@ -66,7 +66,7 @@ public final class EventScheduler {
         
         broadcaster.broadcastBeforeTest();
 
-        executorEngine.startKeepAliveThread(context, settings, broadcaster, eventProperties, killSwitchHandler);
+        executorEngine.startKeepAliveThread(context, settings, broadcaster, eventProperties, schedulerExceptionHandler);
         executorEngine.startCustomEventScheduler(context, scheduleEvents, broadcaster, eventProperties);
 
     }

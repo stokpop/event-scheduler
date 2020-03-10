@@ -16,9 +16,10 @@
 package nl.stokpop.eventscheduler.api;
 
 /**
- * When an event throws a KillSwitchException, the KillSwitchHandler will
- * also be called.
+ * When a keep-alive event throws a KillSwitchException or AbortSchedulerException,
+ * the kill or abort of this handler will be invoked.
  */
-public interface KillSwitchHandler {
-    void kill(String killMessage);
+public interface SchedulerExceptionHandler {
+    void kill(String message);
+    void abort(String message);
 }

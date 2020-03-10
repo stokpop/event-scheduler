@@ -17,8 +17,11 @@ package nl.stokpop.eventscheduler;
 
 import nl.stokpop.eventscheduler.api.CustomEvent;
 import nl.stokpop.eventscheduler.api.EventCheck;
+import nl.stokpop.eventscheduler.exception.AbortSchedulerException;
+import nl.stokpop.eventscheduler.exception.KillSwitchException;
 
 import java.util.List;
+import java.util.Queue;
 
 public interface EventBroadcaster {
 
@@ -35,4 +38,20 @@ public interface EventBroadcaster {
     List<EventCheck> broadcastCheck();
 
     void shutdownAndWaitAllTasksDone(long timeoutSeconds);
+
+    default void throwAbortOrKillWitchException(Queue<Throwable> exceptions) {
+        exceptions.stream()
+            .filter(t -> t instanceof AbortSchedulerException)
+            .findFirst()
+            .ifPresent(abort -> {
+                throw new AbortSchedulerException("Found abort scheduler request during keep-alive broadcast: " + abort.getMessage());
+            });
+
+        exceptions.stream()
+            .filter(t -> t instanceof KillSwitchException)
+            .findFirst()
+            .ifPresent(kill -> {
+                throw new KillSwitchException("Found kill switch request during keep-alive broadcast: " + kill.getMessage());
+            });
+    }
 }

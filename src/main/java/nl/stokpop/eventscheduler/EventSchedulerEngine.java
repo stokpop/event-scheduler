@@ -16,6 +16,7 @@
 package nl.stokpop.eventscheduler;
 
 import nl.stokpop.eventscheduler.api.*;
+import nl.stokpop.eventscheduler.exception.AbortSchedulerException;
 import nl.stokpop.eventscheduler.exception.EventSchedulerRuntimeException;
 import nl.stokpop.eventscheduler.exception.KillSwitchException;
 
@@ -40,7 +41,7 @@ class EventSchedulerEngine {
         this.logger = logger;
     }
 
-    void startKeepAliveThread(TestContext context, EventSchedulerSettings settings, EventBroadcaster broadcaster, EventProperties eventProperties, KillSwitchHandler killSwitchHandler) {
+    void startKeepAliveThread(TestContext context, EventSchedulerSettings settings, EventBroadcaster broadcaster, EventProperties eventProperties, SchedulerExceptionHandler schedulerExceptionHandler) {
         nullChecks(context, broadcaster, eventProperties);
 
         if (executorKeepAlive != null) {
@@ -51,7 +52,7 @@ class EventSchedulerEngine {
 
         executorKeepAlive = createKeepAliveScheduler();
         
-        KeepAliveRunner keepAliveRunner = new KeepAliveRunner(context, broadcaster, eventProperties, killSwitchHandler);
+        KeepAliveRunner keepAliveRunner = new KeepAliveRunner(context, broadcaster, eventProperties, schedulerExceptionHandler);
         executorKeepAlive.scheduleAtFixedRate(keepAliveRunner, 0, settings.getKeepAliveDuration().getSeconds(), TimeUnit.SECONDS);
     }
 
@@ -140,13 +141,13 @@ class EventSchedulerEngine {
         private final TestContext context;
         private final EventBroadcaster broadcaster;
         private final EventProperties eventProperties;
-        private final KillSwitchHandler killSwitchHandler;
+        private final SchedulerExceptionHandler schedulerExceptionHandler;
 
-        KeepAliveRunner(TestContext context, EventBroadcaster broadcaster, EventProperties eventProperties, KillSwitchHandler killSwitchHandler) {
+        KeepAliveRunner(TestContext context, EventBroadcaster broadcaster, EventProperties eventProperties, SchedulerExceptionHandler schedulerExceptionHandler) {
             this.context = context;
             this.broadcaster = broadcaster;
             this.eventProperties = eventProperties;
-            this.killSwitchHandler = killSwitchHandler;
+            this.schedulerExceptionHandler = schedulerExceptionHandler;
         }
 
         @Override
@@ -154,16 +155,33 @@ class EventSchedulerEngine {
             try {
                 broadcaster.broadcastKeepAlive();
             } catch (KillSwitchException e) {
-                String message = e.getMessage();
-                if (killSwitchHandler != null) {
-                    logger.info("KillSwitchException found, invoke KillSwitchHandler: " + message);
-                    killSwitchHandler.kill(e.getMessage());
-                }
-                else {
-                    logger.warn("KillSwitchException was thrown, but no KillSwitchHandler is present. Message: " + message);
-                }
+                handleKillSwitch(e);
+            } catch (AbortSchedulerException e) {
+                handleAbortScheduler(e);
             } catch (Exception e) {
                 logger.error("Broadcast keep-alive failed", e);
+            }
+        }
+
+        private void handleKillSwitch(KillSwitchException e) {
+            String message = e.getMessage();
+            if (schedulerExceptionHandler != null) {
+                logger.info("KillSwitchException found, invoke KillSwitchHandler: " + message);
+                schedulerExceptionHandler.kill(e.getMessage());
+            }
+            else {
+                logger.warn("KillSwitchException was thrown, but no SchedulerExceptionHandler is present. Message: " + message);
+            }
+        }
+
+        private void handleAbortScheduler(AbortSchedulerException e) {
+            String message = e.getMessage();
+            if (schedulerExceptionHandler != null) {
+                logger.info("AbortSchedulerException found, invoke abort on SchedulerExceptionHandler: " + message);
+                schedulerExceptionHandler.abort(e.getMessage());
+            }
+            else {
+                logger.warn("AbortSchedulerException was thrown, but no SchedulerExceptionHandler is present. Message: " + message);
             }
         }
 
