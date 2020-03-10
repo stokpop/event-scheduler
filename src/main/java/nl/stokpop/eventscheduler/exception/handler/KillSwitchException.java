@@ -13,7 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nl.stokpop.eventscheduler.exception;
+package nl.stokpop.eventscheduler.exception.handler;
+
+import nl.stokpop.eventscheduler.api.SchedulerExceptionType;
 
 /**
  * An event can throw KillSwitchException to stop the
@@ -22,8 +24,13 @@ package nl.stokpop.eventscheduler.exception;
  * Use in case a scheduler run should be stopped but results should
  * still be processed.
  */
-public class KillSwitchException extends RuntimeException {
+public class KillSwitchException extends SchedulerHandlerException {
     public KillSwitchException(String message) {
         super(message);
+    }
+
+    @Override
+    public SchedulerExceptionType getExceptionType() {
+        return SchedulerExceptionType.KILL;
     }
 }

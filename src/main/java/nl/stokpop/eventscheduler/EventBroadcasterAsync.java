@@ -16,9 +16,8 @@
 package nl.stokpop.eventscheduler;
 
 import nl.stokpop.eventscheduler.api.*;
-import nl.stokpop.eventscheduler.exception.AbortSchedulerException;
 import nl.stokpop.eventscheduler.exception.EventSchedulerRuntimeException;
-import nl.stokpop.eventscheduler.exception.KillSwitchException;
+import nl.stokpop.eventscheduler.exception.handler.SchedulerHandlerException;
 import nl.stokpop.eventscheduler.log.EventLoggerDevNull;
 
 import java.util.*;
@@ -250,11 +249,8 @@ public class EventBroadcasterAsync implements EventBroadcaster {
         return t -> {
             // t is CompletionException, so get inner cause
             Throwable cause = t.getCause();
-            if (cause instanceof KillSwitchException) {
-                logger.debug("KillSwitch requested from event '" + e.getName() + "'");
-            }
-            else if (cause instanceof AbortSchedulerException) {
-                logger.debug("AbortScheduler requested from event '" + e.getName() + "'");
+            if (cause instanceof SchedulerHandlerException) {
+                logger.debug("SchedulerHandler " + ((SchedulerHandlerException)cause).getExceptionType() + " requested from event '" + e.getName() + "'");
             }
             else {
                 logger.error("Event failure in '" + e.getName() + "'", cause);

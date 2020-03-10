@@ -16,8 +16,8 @@
 package nl.stokpop.eventscheduler;
 
 import nl.stokpop.eventscheduler.api.*;
-import nl.stokpop.eventscheduler.exception.AbortSchedulerException;
-import nl.stokpop.eventscheduler.exception.KillSwitchException;
+import nl.stokpop.eventscheduler.exception.handler.AbortSchedulerException;
+import nl.stokpop.eventscheduler.exception.handler.KillSwitchException;
 import nl.stokpop.eventscheduler.log.EventLoggerStdOut;
 import org.junit.Test;
 

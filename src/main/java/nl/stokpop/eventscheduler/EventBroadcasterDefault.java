@@ -19,8 +19,7 @@ import nl.stokpop.eventscheduler.api.CustomEvent;
 import nl.stokpop.eventscheduler.api.Event;
 import nl.stokpop.eventscheduler.api.EventCheck;
 import nl.stokpop.eventscheduler.api.EventLogger;
-import nl.stokpop.eventscheduler.exception.AbortSchedulerException;
-import nl.stokpop.eventscheduler.exception.KillSwitchException;
+import nl.stokpop.eventscheduler.exception.handler.SchedulerHandlerException;
 import nl.stokpop.eventscheduler.log.EventLoggerDevNull;
 
 import java.util.*;
@@ -55,7 +54,7 @@ public class EventBroadcasterDefault implements EventBroadcaster {
     }
 
     @Override
-    public void broadcastKeepAlive() throws KillSwitchException, AbortSchedulerException {
+    public void broadcastKeepAlive() throws SchedulerHandlerException {
         logger.debug("broadcast keep alive event");
         Queue<Throwable> exceptions = new ConcurrentLinkedQueue<>();
         events.forEach(catchExceptionWrapper(Event::keepAlive, exceptions));
@@ -90,7 +89,7 @@ public class EventBroadcasterDefault implements EventBroadcaster {
     /**
      * Make sure events continue, even when exceptions are thrown, except when kill switch or abort is requested.
      */
-    private Consumer<Event> catchExceptionWrapper(Consumer<Event> consumer) throws KillSwitchException, AbortSchedulerException {
+    private Consumer<Event> catchExceptionWrapper(Consumer<Event> consumer) throws SchedulerHandlerException {
         return catchExceptionWrapper(consumer, null);
     }
 
@@ -102,7 +101,7 @@ public class EventBroadcasterDefault implements EventBroadcaster {
         return event -> {
             try {
                 consumer.accept(event);
-            } catch (KillSwitchException | AbortSchedulerException e) {
+            } catch (SchedulerHandlerException e) {
                 if (errors != null) {
                     errors.add(e);
                 }

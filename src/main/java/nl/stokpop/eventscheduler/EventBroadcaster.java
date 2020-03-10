@@ -17,8 +17,8 @@ package nl.stokpop.eventscheduler;
 
 import nl.stokpop.eventscheduler.api.CustomEvent;
 import nl.stokpop.eventscheduler.api.EventCheck;
-import nl.stokpop.eventscheduler.exception.AbortSchedulerException;
-import nl.stokpop.eventscheduler.exception.KillSwitchException;
+import nl.stokpop.eventscheduler.exception.handler.AbortSchedulerException;
+import nl.stokpop.eventscheduler.exception.handler.KillSwitchException;
 
 import java.util.List;
 import java.util.Queue;

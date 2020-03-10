@@ -16,9 +16,8 @@
 package nl.stokpop.eventscheduler;
 
 import nl.stokpop.eventscheduler.api.*;
-import nl.stokpop.eventscheduler.exception.AbortSchedulerException;
 import nl.stokpop.eventscheduler.exception.EventSchedulerRuntimeException;
-import nl.stokpop.eventscheduler.exception.KillSwitchException;
+import nl.stokpop.eventscheduler.exception.handler.SchedulerHandlerException;
 
 import java.util.List;
 import java.util.concurrent.Executors;
@@ -154,34 +153,27 @@ class EventSchedulerEngine {
         public void run() {
             try {
                 broadcaster.broadcastKeepAlive();
-            } catch (KillSwitchException e) {
-                handleKillSwitch(e);
-            } catch (AbortSchedulerException e) {
-                handleAbortScheduler(e);
+            } catch (SchedulerHandlerException e) {
+                handleException(e);
             } catch (Exception e) {
                 logger.error("Broadcast keep-alive failed", e);
             }
         }
 
-        private void handleKillSwitch(KillSwitchException e) {
+        private void handleException(SchedulerHandlerException e) {
             String message = e.getMessage();
+            SchedulerExceptionType exceptionType = e.getExceptionType();
             if (schedulerExceptionHandler != null) {
-                logger.info("KillSwitchException found, invoke KillSwitchHandler: " + message);
-                schedulerExceptionHandler.kill(e.getMessage());
+                logger.info("SchedulerHandlerException found, invoke " + exceptionType + " on SchedulerExceptionHandler: " + message);
+                if (exceptionType == SchedulerExceptionType.KILL) {
+                    schedulerExceptionHandler.kill(e.getMessage());
+                }
+                else if (exceptionType == SchedulerExceptionType.ABORT) {
+                    schedulerExceptionHandler.abort(e.getMessage());
+                }
             }
             else {
-                logger.warn("KillSwitchException was thrown, but no SchedulerExceptionHandler is present. Message: " + message);
-            }
-        }
-
-        private void handleAbortScheduler(AbortSchedulerException e) {
-            String message = e.getMessage();
-            if (schedulerExceptionHandler != null) {
-                logger.info("AbortSchedulerException found, invoke abort on SchedulerExceptionHandler: " + message);
-                schedulerExceptionHandler.abort(e.getMessage());
-            }
-            else {
-                logger.warn("AbortSchedulerException was thrown, but no SchedulerExceptionHandler is present. Message: " + message);
+                logger.warn("SchedulerHandlerException " + exceptionType + " was thrown, but no SchedulerExceptionHandler is present. Message: " + message);
             }
         }
 
