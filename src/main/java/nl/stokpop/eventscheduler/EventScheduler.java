@@ -78,9 +78,9 @@ public final class EventScheduler {
         logger.info("Stop test session.");
         isSessionStopped = true;
 
-        broadcaster.broadcastAfterTest();
-
         executorEngine.shutdownThreadsNow();
+
+        broadcaster.broadcastAfterTest();
 
         logger.info("All broadcasts for stop test session are done");
     }
@@ -99,9 +99,10 @@ public final class EventScheduler {
         logger.info("Test session abort called.");
         isSessionStopped = true;
 
+        executorEngine.shutdownThreadsNow();
+
         broadcaster.broadcastAbortTest();
 
-        executorEngine.shutdownThreadsNow();
     }
 
     /**
@@ -112,6 +113,8 @@ public final class EventScheduler {
         logger.info("Check results called.");
 
         List<EventCheck> eventChecks = broadcaster.broadcastCheck();
+
+        logger.debug("event checks: " + eventChecks);
 
         boolean success = eventChecks.stream().allMatch(e -> e.getEventStatus() != EventStatus.FAILURE);
 
