@@ -28,7 +28,7 @@ public class TestContext {
 
     private final String systemUnderTest;
     private final String workload;
-    private final String environment;
+    private final String testEnvironment;
     private final String testRunId;
     private final String version;
     private final String CIBuildResultsUrl;
@@ -38,10 +38,10 @@ public class TestContext {
     private final Map<String, String> variables;
     private final List<String> tags;
 
-    TestContext(String systemUnderTest, String workload, String environment, String testRunId, String CIBuildResultsUrl, String version, Duration rampupTime, Duration plannedDuration, String annotations, Map<String, String> variables, List<String> tags) {
+    TestContext(String systemUnderTest, String workload, String testEnvironment, String testRunId, String CIBuildResultsUrl, String version, Duration rampupTime, Duration plannedDuration, String annotations, Map<String, String> variables, List<String> tags) {
         this.systemUnderTest = systemUnderTest;
         this.workload = workload;
-        this.environment = environment;
+        this.testEnvironment = testEnvironment;
         this.testRunId = testRunId;
         this.CIBuildResultsUrl = CIBuildResultsUrl;
         this.version = version;
@@ -60,8 +60,8 @@ public class TestContext {
         return workload;
     }
 
-    public String getEnvironment() {
-        return environment;
+    public String getTestEnvironment() {
+        return testEnvironment;
     }
 
     public String getTestRunId() {

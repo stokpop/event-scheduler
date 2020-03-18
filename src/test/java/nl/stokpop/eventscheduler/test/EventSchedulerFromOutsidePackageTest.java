@@ -52,7 +52,7 @@ public class EventSchedulerFromOutsidePackageTest
 
         TestContext context = new TestContextBuilder()
                 .setWorkload("testType")
-                .setEnvironment("testEnv")
+                .setTestEnvironment("testEnv")
                 .setTestRunId("testRunId")
                 .setCIBuildResultsUrl("http://url")
                 .setVersion("release")

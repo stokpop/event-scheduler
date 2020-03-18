@@ -140,6 +140,6 @@ public final class EventScheduler {
     public String toString() {
         return "EventScheduler [testRunId:" + context.getTestRunId()
             + " testType:" + context.getWorkload()
-            + " testEnv:" + context.getEnvironment() + "]";
+            + " testEnv:" + context.getTestEnvironment() + "]";
     }
 }

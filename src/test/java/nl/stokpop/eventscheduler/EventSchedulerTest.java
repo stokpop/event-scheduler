@@ -69,7 +69,7 @@ public class EventSchedulerTest
 
         TestContext context = new TestContextBuilder()
                 .setWorkload("testType")
-                .setEnvironment("testEnv")
+                .setTestEnvironment("testEnv")
                 .setTestRunId("testRunId")
                 .setCIBuildResultsUrl("http://url")
                 .setVersion("version")
@@ -144,7 +144,7 @@ public class EventSchedulerTest
                 .setConstantLoadTime(null)
                 .setRampupTimeInSeconds(null)
                 .setRampupTime(null)
-                .setEnvironment(null)
+                .setTestEnvironment(null)
                 .setTestRunId(null)
                 .setWorkload(null)
                 .setVariables((Properties)null)
