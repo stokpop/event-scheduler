@@ -19,6 +19,7 @@ import nl.stokpop.eventscheduler.api.*;
 import nl.stokpop.eventscheduler.exception.EventCheckFailureException;
 
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 public final class EventScheduler {
@@ -33,16 +34,21 @@ public final class EventScheduler {
     private final EventBroadcaster broadcaster;
     private final EventProperties eventProperties;
     private final List<CustomEvent> scheduleEvents;
-    private SchedulerExceptionHandler schedulerExceptionHandler;
+    private volatile SchedulerExceptionHandler schedulerExceptionHandler;
 
-    private EventSchedulerEngine executorEngine;
+    private final EventSchedulerEngine eventSchedulerEngine;
 
-    private boolean isSessionStopped = false;
+    private final AtomicBoolean isSessionActive = new AtomicBoolean(false);
 
-    EventScheduler(TestContext context, EventSchedulerSettings settings,
-                   boolean checkResultsEnabled, EventBroadcaster broadcaster,
+    EventScheduler(TestContext context,
+                   EventSchedulerSettings settings,
+                   boolean checkResultsEnabled,
+                   EventBroadcaster broadcaster,
                    EventProperties eventProperties,
-                   List<CustomEvent> scheduleEvents, EventLogger logger, SchedulerExceptionHandler schedulerExceptionHandler) {
+                   List<CustomEvent> scheduleEvents,
+                   EventLogger logger,
+                   EventSchedulerEngine eventSchedulerEngine,
+                   SchedulerExceptionHandler schedulerExceptionHandler) {
         this.context = context;
         this.settings = settings;
         this.checkResultsEnabled = checkResultsEnabled;
@@ -50,7 +56,7 @@ public final class EventScheduler {
         this.broadcaster = broadcaster;
         this.scheduleEvents = scheduleEvents;
         this.logger = logger;
-        this.executorEngine = new EventSchedulerEngine(logger);
+        this.eventSchedulerEngine = eventSchedulerEngine;
         this.schedulerExceptionHandler = schedulerExceptionHandler;
     }
 
@@ -61,48 +67,63 @@ public final class EventScheduler {
      * Start a test session.
      */
     public void startSession() {
-        logger.info("Start test session");
-        isSessionStopped = false;
-        
-        broadcaster.broadcastBeforeTest();
+        boolean wasInActive = isSessionActive.compareAndSet(false, true);
+        if (!wasInActive) {
+            logger.warn("unexpected call to start session, session was active already, ignore call!");
+        }
+        else {
+            logger.info("start test session");
 
-        executorEngine.startKeepAliveThread(context, settings, broadcaster, eventProperties, schedulerExceptionHandler);
-        executorEngine.startCustomEventScheduler(context, scheduleEvents, broadcaster, eventProperties);
+            broadcaster.broadcastBeforeTest();
 
+            eventSchedulerEngine.startKeepAliveThread(context, settings, broadcaster, eventProperties, schedulerExceptionHandler);
+            eventSchedulerEngine.startCustomEventScheduler(context, scheduleEvents, broadcaster, eventProperties);
+        }
     }
 
     /**
      * Stop a test session.
      */
     public void stopSession() {
-        logger.info("Stop test session.");
-        isSessionStopped = true;
+        boolean wasActive = isSessionActive.compareAndSet(true, false);
 
-        executorEngine.shutdownThreadsNow();
+        if (!wasActive) {
+            logger.warn("unexpected call to stop session, session was inactive already, ignoring call: please debug");
+        }
+        else {
+            logger.info("stop test session.");
 
-        broadcaster.broadcastAfterTest();
+            eventSchedulerEngine.shutdownThreadsNow();
 
-        logger.info("All broadcasts for stop test session are done");
+            broadcaster.broadcastAfterTest();
+
+            logger.info("all broadcasts for stop test session are done");
+        }
     }
 
     /**
      * @return true when stop or abort has been called.
      */
     public boolean isSessionStopped() {
-        return isSessionStopped;
+        return !isSessionActive.get();
     }
 
     /**
      * Call to abort this test run.
      */
     public void abortSession() {
-        logger.info("Test session abort called.");
-        isSessionStopped = true;
+        boolean wasActive = isSessionActive.compareAndSet(true, false);
 
-        executorEngine.shutdownThreadsNow();
+        if (!wasActive) {
+            logger.warn("unexpected call to abort session, session was inactive already, ignoring call: please debug");
+        }
+        else {
+            logger.info("test session abort called");
 
-        broadcaster.broadcastAbortTest();
+            eventSchedulerEngine.shutdownThreadsNow();
 
+            broadcaster.broadcastAbortTest();
+        }
     }
 
     /**
@@ -110,7 +131,7 @@ public final class EventScheduler {
      * @throws EventCheckFailureException when there are events that report failures
      */
     public void checkResults() throws EventCheckFailureException {
-        logger.info("Check results called.");
+        logger.info("check results called");
 
         List<EventCheck> eventChecks = broadcaster.broadcastCheck();
 
@@ -118,20 +139,20 @@ public final class EventScheduler {
 
         boolean success = eventChecks.stream().allMatch(e -> e.getEventStatus() != EventStatus.FAILURE);
 
-        logger.debug("Checked " + eventChecks.size() + " event checks. All success: " + success);
+        logger.debug("checked " + eventChecks.size() + " event checks, all success: " + success);
 
         if (!success) {
             String failureMessage = eventChecks.stream()
                     .filter(e -> e.getEventStatus() == EventStatus.FAILURE)
                     .map(e -> String.format("class: '%s' eventId: '%s' message: '%s'", e.getEventClassName(), e.getEventId(), e.getMessage()))
                     .collect(Collectors.joining(", "));
-            String message = String.format("Event checks with failures found: [%s]", failureMessage);
+            String message = String.format("event checks with failures found: [%s]", failureMessage);
             if (checkResultsEnabled) {
-                logger.info("One or more event checks reported a failure: " + message);
+                logger.info("one or more event checks reported a failure: " + message);
                 throw new EventCheckFailureException(message);
             }
             else {
-                logger.warn("CheckResultsEnabled is false, not throwing EventCheckFailureException with message: " + message);
+                logger.warn("checkResultsEnabled is false, not throwing EventCheckFailureException with message: " + message);
             }
         }
     }

@@ -55,6 +55,13 @@ public class EventSchedulerBuilder {
 
     private SchedulerExceptionHandler schedulerExceptionHandler;
 
+    private EventSchedulerEngine eventSchedulerEngine;
+
+    public EventSchedulerBuilder setEventSchedulerEngine(EventSchedulerEngine executorEngine) {
+        this.eventSchedulerEngine = executorEngine;
+        return this;
+    }
+
     public EventSchedulerBuilder setSchedulerExceptionHandler(SchedulerExceptionHandler callback) {
         this.schedulerExceptionHandler = callback;
         return this;
@@ -100,14 +107,14 @@ public class EventSchedulerBuilder {
             throw new EventSchedulerRuntimeException("TestContext must be set, it is null.");
         }
 
-        EventSchedulerSettings myEventSchedulerSettings = eventSchedulerSettings == null
+        EventSchedulerSettings myEventSchedulerSettings = (eventSchedulerSettings == null)
                 ? new EventSchedulerSettingsBuilder().build()
                 : eventSchedulerSettings;
         
         List<CustomEvent> customEvents =
                 generateCustomEventSchedule(testContext, customEventsText, logger, classLoader);
 
-        EventFactoryProvider provider = eventFactoryProvider == null
+        EventFactoryProvider provider = (eventFactoryProvider == null)
                 ? EventFactoryProvider.createInstanceFromClasspath(classLoader)
                 : eventFactoryProvider;
 
@@ -120,14 +127,26 @@ public class EventSchedulerBuilder {
                 .map(p -> createEvent(provider, p, testContext))
                 .collect(Collectors.toList());
 
-        EventBroadcasterFactory broadcasterFactory = eventBroadcasterFactory == null
+        EventBroadcasterFactory broadcasterFactory = (eventBroadcasterFactory == null)
                 ? EventBroadcasterAsync::new
                 : eventBroadcasterFactory;
 
         EventBroadcaster broadcaster = broadcasterFactory.create(events, logger);
 
-        return new EventScheduler(testContext, myEventSchedulerSettings, assertResultsEnabled,
-                broadcaster, eventProperties, customEvents, logger, schedulerExceptionHandler);
+        eventSchedulerEngine = (eventSchedulerEngine == null)
+            ? new EventSchedulerEngine(logger)
+            : eventSchedulerEngine;
+
+        return new EventScheduler(
+            testContext,
+            myEventSchedulerSettings,
+            assertResultsEnabled,
+            broadcaster,
+            eventProperties,
+            customEvents,
+            logger,
+            eventSchedulerEngine,
+            schedulerExceptionHandler);
     }
 
     private Event createEvent(EventFactoryProvider provider, EventInfo eventInfo, TestContext testContext) {

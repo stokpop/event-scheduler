@@ -234,4 +234,36 @@ public class EventSchedulerTest
                 .build();
     }
 
+    @Test
+    public void stopAndAbort()  {
+
+        EventSchedulerEngine eventSchedulerEngine = mock(EventSchedulerEngine.class);
+
+        Properties properties = new Properties();
+        properties.setProperty(EventProperties.PROP_EVENT_ENABLED, "true");
+        properties.put(EventProperties.PROP_FACTORY_CLASSNAME, "nl.stokpop.eventscheduler.event.EventFactoryDefault");
+        properties.setProperty("unknown", "bar");
+
+        EventScheduler scheduler = new EventSchedulerBuilder()
+                .setTestContext(new TestContextBuilder().build())
+                .addEvent("myEvent", properties)
+                .setLogger(EventLoggerStdOut.INSTANCE_DEBUG)
+                .setEventSchedulerEngine(eventSchedulerEngine)
+                .build();
+
+        scheduler.startSession();
+
+        scheduler.startSession();
+
+        scheduler.stopSession();
+
+        scheduler.abortSession();
+
+        // should be called only one time, also for multiple starts in a row
+        Mockito.verify(eventSchedulerEngine, times(1)).startCustomEventScheduler(any(), any(), any(), any());
+
+        // should be called once in stop, not also in abort
+        Mockito.verify(eventSchedulerEngine, times(1)).shutdownThreadsNow();
+
+    }
 }
