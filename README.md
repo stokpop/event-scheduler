@@ -6,54 +6,65 @@ For instance during a performance test to dynamically increase response times ov
 
 # usage
 
-Create a an EventScheduler using the builders:
+Create an `EventScheduler` using the builder with an `EventSchedulerConfig`:
 
 ```java
-EventSchedulerSettings settings = new EventSchedulerSettingsBuilder()
-        .setKeepAliveInterval(Duration.ofSeconds(30))
-        .build();
+EventLogger eventLogger = EventLoggerStdOut.INSTANCE;
 
-TestContext context = new TestContextBuilder()
-        .setSystemUnderTest("sut")
-        .setWorkload("worload")
-        .setTestEnvironment("env")
-        .setTestRunId("testRunId")
-        .setCIBuildResultsUrl("http://url")
-        .setVersion("version")
-        .setRampupTimeInSeconds("10")
-        .setConstantLoadTimeInSeconds("300")
-        .setAnnotations("annotation")
-        .setVariables(Collections.emptyMap())
-        .setTags("tag1,tag2")
-        .build();
+String scheduleScript1 =
+    "PT600S|scale-down|{ 'replicas':1 }\n" +
+    "PT660S|heapdump|server=myserver.example.com;port=1567";
 
-Properties properties = new Properties();
-properties.put("name", "value");
-properties.put(EventProperties.FACTORY_CLASSNAME_KEY, "nl.stokpop.eventscheduler.event.EventFactoryDefault");
+String scheduleScript2 =
+    "PT1S|restart(restart to reset replicas)|{ 'server':'myserver' 'replicas':2, 'tags': [ 'first', 'second' ] }";
 
-EventScheduler scheduler = new EventSchedulerBuilder()
-        .setEventSchedulerSettings(settings)
-        .setTestContext(context)
-        .setAssertResultsEnabled(true)
-        .addEvent("myEvent1", properties)
-        .addEvent("myEvent2", properties)
-        .addEvent("myEvent3", properties)
-        .setCustomEvents(eventSchedule)
-        .setLogger(testLogger)
-        .setEventFactoryProvider(provider)
-        .build();
+TestConfig testConfig = TestConfig.builder()
+    .workload("testType")
+    .testEnvironment("testEnv")
+    .testRunId("testRunId")
+    .buildResultsUrl("http://url")
+    .version("version")
+    .rampupTimeInSeconds(10)
+    .constantLoadTimeInSeconds(300)
+    .annotations("annotation")
+    .variables(Collections.emptyMap())
+    .tags(Arrays.asList("tag1","tag2"))
+    .build();
+
+// this class really needs to be on the classpath, otherwise: runtime exception, not found on classpath
+String factoryClassName = "nl.stokpop.eventscheduler.event.EventFactoryDefault";
+
+List<EventConfig> eventConfigs = new ArrayList<>();
+eventConfigs.add(EventConfig.builder().name("myEvent1").eventFactory(factoryClassName).scheduleScript(scheduleScript2).build());
+eventConfigs.add(EventConfig.builder().name("myEvent2").eventFactory(factoryClassName).build());
+eventConfigs.add(EventConfig.builder().name("myEvent3").eventFactory(factoryClassName).build());
+
+EventSchedulerConfig eventSchedulerConfig = EventSchedulerConfig.builder()
+    .schedulerEnabled(true)
+    .debugEnabled(false)
+    .continueOnAssertionFailure(false)
+    .failOnError(true)
+    .keepAliveIntervalInSeconds(120)
+    .testConfig(testConfig)
+    .eventConfigs(eventConfigs)
+    .scheduleScript(scheduleScript1)
+    .build();
+
+EventScheduler scheduler = EventSchedulerBuilder.of(eventSchedulerConfig, eventLogger);
 ```
 
 Note that a lot of properties of the builders have decent defaults 
 and do not need to be called, such as the retry and keep alive properties.
 
-When adding events, each event can have its own properties. That makes it possible
-to configure multiple Wiremock event that use different Wiremock urls for instance. 
+The `TestConfig` describes high level properties of a test run. 
 
-The `addEvent` accepts a unique event name and the properties for that particular event.
-Also, the event factory class needs to be provided via the `EventProperties.FACTORY_CLASSNAME_KEY`, 
-so the events can be dynamically instantiated based on the availability on the classpath
-of the `EventFactory` and `Event` implementation classes.
+A `TestConfig` can be set at the `EventSchedulerConfig` and at the `EventConfig`. When
+set at the `EventSchedulerConfig`, no `EventConfig` are allowed to have an `TestConfig`.
+If one `EventConfig` has a `TestConfig`, that one will be used as top level `TestConfig`.
+It is not allowed to have multiple `EventConfig`s with a `TestConfig`.
+
+When adding events, each event can have its own values. That makes it possible
+to configure multiple Wiremock event that use different Wiremock urls for instance.
  
 Then call these methods at the appropriate time:
 
@@ -67,7 +78,19 @@ Call when the load test stops.
 
 During a test run this Event Scheduler emits events. You can put
 your own implementation of the `EventFactory` and `Event` interface on the classpath
-and add your own code to these events.
+and add your own code to these events. 
+
+For event specific properties create a subclass of `EventConfig` and add the properties.
+Use this `XxxEventConfig` in the generics of the `XxxEventFactory`. 
+Override the `getEventFactory()` method in the `XxxEventConfig` class to define the
+factory class to use:
+
+```java 
+@Override
+public String getEventFactory() {
+    return XxxEventFactory.class.getName();
+}
+```
 
 Events triggers available, with example usage:
 * _before test_ - use to restart servers or setup/cleanup environment
@@ -102,7 +125,7 @@ json snippet or event base64 encoded contents.
 Example:
 
 ```java
-builder.setEventSchedule(eventSchedule)
+EventSchedulerConfig.builder().scheduleScript(eventSchedule).build()
 ```    
 And as input:
 
@@ -128,48 +151,67 @@ The setting will be send along with the event as well, for your own code to inte
 When no settings are present, like with de scale-down event in this example, the settings
 event will receive null for settings.
 
-## maven plugin
+## event-scheduler maven plugins
 
-To use the events via the Gatling maven plugin the jar with the
+To use the events via the `event-scheduler-maven-plugin`, the jar with the
 implementation details must be on the classpath of the plugin.
 
 You can use the `dependencies` element inside the `plugin` element.
 
-For example:
+For example, using the `test-events-hello-world` event-scheduler plugin (yes, a plugin of a plugin):
 
 ```xml 
 <plugin>
     <groupId>nl.stokpop</groupId>
-    <artifactId>events-gatling-maven-plugin</artifactId>
+    <artifactId>event-scheduler-maven-plugin</artifactId>
+    <version>1.1.0</version>
     <configuration>
-        <simulationClass>afterburner.AfterburnerBasicSimulation</simulationClass>
-        <eventScheduleScript>
-            PT5S|restart|{ server:'myserver' replicas:2 tags: [ 'first', 'second' ] }
-            PT10M|scale-down
-            PT10M45S|heapdump|server=myserver.example.com;port=1567
-            PT15M|scale-up|{ replicas:2 }
-        </eventScheduleScript>
-        <events>
-            <StokpopHelloEvent1>
-                <eventFactory>nl.stokpop.event.StokpopHelloEventFactory</eventFactory>
-                <myRestServer>https://my-rest-api</myName>
-                <myCredentials>${ENV.SECRET}</myCredentials>
-            </StokpopHelloEvent1>
-        </events>
+        <eventSchedulerConfig>
+            <debugEnabled>false</debugEnabled>
+            <schedulerEnabled>true</schedulerEnabled>
+            <failOnError>true</failOnError>
+            <continueOnAssertionFailure>true</continueOnAssertionFailure>
+            <eventConfigs>
+                <eventConfig implementation="nl.stokpop.helloworld.event.StokpopEventConfig">
+                    <name>StokpopHelloEvent1</name>
+                    <testConfig>
+                        <systemUnderTest>my-application</systemUnderTest>
+                        <version>1.2.3</version>
+                        <workload>stress-test</workload>
+                        <testEnvironment>loadtest</testEnvironment>
+                        <testRunId>my-test-123</testRunId>
+                        <buildResultsUrl>http://localhost:4000/my-test-123</buildResultsUrl>
+                        <rampupTimeInSeconds>1</rampupTimeInSeconds>
+                        <constantLoadTimeInSeconds>4</constantLoadTimeInSeconds>
+                        <annotations>${annotation}</annotations>
+                        <tags>
+                            <tag>tag1-value</tag>
+                            <tag>tag2-value</tag>
+                        </tags>
+                    </testConfig>
+                    <scheduleScript>
+                        PT1S|restart(restart with 2 replicas)|{ server:'myserver' replicas:2 tags: [ 'first', 'second' ] }
+                    </scheduleScript>
+                    <myRestService>https://my-rest-api</myRestService>
+                    <myCredentials>${env.SECRET}</myCredentials>
+                    <helloMessage>Hello, Hello World!</helloMessage>
+                    <helloInitialSleepSeconds>1</helloInitialSleepSeconds>
+                </eventConfig>
+            </eventConfigs>
+        </eventSchedulerConfig>
     </configuration>
     <dependencies>
         <dependency>
             <groupId>nl.stokpop</groupId>
             <artifactId>test-events-hello-world</artifactId>
-            <version>1.0.1</version>
+            <version>1.1.0</version>
         </dependency>
     </dependencies>
 </plugin>
 ```
 
-Note that the `eventFactory` element is mandatory, it defines the factory to use to create an event.
-The `StokpopHelloEvent1` element is the name of the particular event created by the Factory and can be 
-any unique event name. The event name is used in the logging. 
+Note that the `<eventConfig implementation="...">` implementation field is mandatory, it defines the `EventConfig` subtype to use.
+The name of an event, here `StokpopHelloEvent1`, should a unique event name. The event name is used in the logging. 
 
 # custom events generator
 
@@ -193,12 +235,12 @@ The `foo=bar` is an example of properties for the event generator.
 You can use multiple lines for multiple properties.
 
 Properties that start with @-sign are so-called "meta" properties and
-should propertieds with @-sign should preferably not be used as custom properties
+should properties with @-sign should preferably not be used as custom properties
 inside the implementation class.   
 
 ## class loaders
 If classes are not available on the default classpath of the Thread, you can provide your
-own ClassLoader via `nl.stokpop.eventscheduler.api.EventSchedulerBuilder.build(java.lang.ClassLoader)`.
+own ClassLoader via `nl.stokpop.eventscheduler.api.EventSchedulerBuilder.of(EventSchedulerConfig, ClassLoader)`.
 Useful when running with Gradle instead of Maven.
 
 ## event logging

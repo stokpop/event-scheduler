@@ -17,8 +17,6 @@ package nl.stokpop.eventscheduler.test;
 
 import nl.stokpop.eventscheduler.EventScheduler;
 import nl.stokpop.eventscheduler.EventSchedulerBuilder;
-import nl.stokpop.eventscheduler.api.EventSchedulerSettings;
-import nl.stokpop.eventscheduler.api.EventSchedulerSettingsBuilder;
 import nl.stokpop.eventscheduler.api.config.EventConfig;
 import nl.stokpop.eventscheduler.api.config.EventSchedulerConfig;
 import nl.stokpop.eventscheduler.api.config.TestConfig;
@@ -26,7 +24,6 @@ import nl.stokpop.eventscheduler.log.CountErrorsEventLogger;
 import nl.stokpop.eventscheduler.log.EventLoggerStdOut;
 import org.junit.Test;
 
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -57,10 +54,6 @@ public class EventSchedulerFromOutsidePackageTest
                 "PT660S|    heapdump|server=    myserver.example.com;   port=1567  \n" +
                 "  \n";
 
-        EventSchedulerSettings settings = new EventSchedulerSettingsBuilder()
-                .setKeepAliveInterval(Duration.ofMinutes(2))
-                .build();
-
         TestConfig testConfig = TestConfig.builder()
             .workload("testType")
             .testEnvironment("testEnv")
@@ -87,6 +80,7 @@ public class EventSchedulerFromOutsidePackageTest
             .debugEnabled(false)
             .continueOnAssertionFailure(false)
             .failOnError(true)
+            .keepAliveIntervalInSeconds(120)
             .testConfig(testConfig)
             .eventConfigs(eventConfigs)
             .scheduleScript(scheduleScript1)
@@ -97,7 +91,6 @@ public class EventSchedulerFromOutsidePackageTest
         assertEquals("4 lines expected in total scheduler script", 4, eventSchedulerConfig.getScheduleScript().split("\\n").length);
 
         assertNotNull(scheduler);
-        assertEquals(120, settings.getKeepAliveDuration().getSeconds());
         scheduler.startSession();
         scheduler.stopSession();
 

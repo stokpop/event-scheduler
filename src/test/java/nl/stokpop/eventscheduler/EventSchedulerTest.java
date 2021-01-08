@@ -48,7 +48,7 @@ public class EventSchedulerTest
         EventFactoryProvider provider = Mockito.mock(EventFactoryProvider.class);
         // to simulate event failures
         Event event = Mockito.mock(Event.class);
-        EventFactory eventFactory = Mockito.mock(EventFactory.class);
+        EventFactory<?> eventFactory = Mockito.mock(EventFactory.class);
 
         Mockito.when(eventFactory.create(any(), any())).thenReturn(event);
         Mockito.when(provider.factoryByClassName(any())).thenReturn(Optional.of(eventFactory));

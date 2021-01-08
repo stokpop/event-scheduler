@@ -20,6 +20,6 @@ import nl.stokpop.eventscheduler.api.config.EventConfig;
 /**
  * Create an EventGenerator based on the given event config.
  */
-public interface EventFactory {
-    Event create(EventConfig eventConfig, EventLogger logger);
+public interface EventFactory<T extends EventConfig> {
+    Event create(T eventConfig, EventLogger logger);
 }
