@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Peter Paul Bakker, Stokpop Software Solutions
+ * Copyright (C) 2021 Peter Paul Bakker, Stokpop Software Solutions
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,8 +18,7 @@ package nl.stokpop.eventscheduler.event;
 import nl.stokpop.eventscheduler.api.Event;
 import nl.stokpop.eventscheduler.api.EventFactory;
 import nl.stokpop.eventscheduler.api.EventLogger;
-import nl.stokpop.eventscheduler.api.EventProperties;
-import nl.stokpop.eventscheduler.api.TestContext;
+import nl.stokpop.eventscheduler.api.config.EventConfig;
 
 public class EventFactoryDefault implements EventFactory {
 
@@ -34,8 +33,8 @@ public class EventFactoryDefault implements EventFactory {
     }
 
     @Override
-    public Event create(String eventName, TestContext context, EventProperties properties, EventLogger logger) {
-        return new EventDefault(eventName, context, properties, logger);
+    public Event create(EventConfig eventConfig, EventLogger logger) {
+        return new EventDefault(eventConfig, logger);
     }
 
     @Override

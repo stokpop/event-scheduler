@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Peter Paul Bakker, Stokpop Software Solutions
+ * Copyright (C) 2021 Peter Paul Bakker, Stokpop Software Solutions
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,13 +26,14 @@ public final class EventScheduler {
 
     private final EventLogger logger;
 
-    private final TestContext context;
+    private final String name;
+
     private final EventSchedulerSettings settings;
 
     private final boolean checkResultsEnabled;
 
     private final EventBroadcaster broadcaster;
-    private final EventProperties eventProperties;
+
     private final List<CustomEvent> scheduleEvents;
     private volatile SchedulerExceptionHandler schedulerExceptionHandler;
 
@@ -40,19 +41,17 @@ public final class EventScheduler {
 
     private final AtomicBoolean isSessionActive = new AtomicBoolean(false);
 
-    EventScheduler(TestContext context,
+    EventScheduler(String name,
                    EventSchedulerSettings settings,
                    boolean checkResultsEnabled,
                    EventBroadcaster broadcaster,
-                   EventProperties eventProperties,
                    List<CustomEvent> scheduleEvents,
                    EventLogger logger,
                    EventSchedulerEngine eventSchedulerEngine,
                    SchedulerExceptionHandler schedulerExceptionHandler) {
-        this.context = context;
+        this.name = name;
         this.settings = settings;
         this.checkResultsEnabled = checkResultsEnabled;
-        this.eventProperties = eventProperties;
         this.broadcaster = broadcaster;
         this.scheduleEvents = scheduleEvents;
         this.logger = logger;
@@ -76,8 +75,8 @@ public final class EventScheduler {
 
             broadcaster.broadcastBeforeTest();
 
-            eventSchedulerEngine.startKeepAliveThread(context, settings, broadcaster, eventProperties, schedulerExceptionHandler);
-            eventSchedulerEngine.startCustomEventScheduler(context, scheduleEvents, broadcaster, eventProperties);
+            eventSchedulerEngine.startKeepAliveThread(name, settings, broadcaster, schedulerExceptionHandler);
+            eventSchedulerEngine.startCustomEventScheduler(scheduleEvents, broadcaster);
         }
     }
 
@@ -159,8 +158,6 @@ public final class EventScheduler {
 
     @Override
     public String toString() {
-        return "EventScheduler [testRunId:" + context.getTestRunId()
-            + " testType:" + context.getWorkload()
-            + " testEnv:" + context.getTestEnvironment() + "]";
+        return "EventScheduler [testRunId:" + name + "]";
     }
 }

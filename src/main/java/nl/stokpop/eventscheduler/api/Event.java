@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Peter Paul Bakker, Stokpop Software Solutions
+ * Copyright (C) 2021 Peter Paul Bakker, Stokpop Software Solutions
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,9 +14,6 @@
  * limitations under the License.
  */
 package nl.stokpop.eventscheduler.api;
-
-import java.util.Collection;
-import java.util.Collections;
 
 /**
  * This interface can be implemented in other jars and be put on the classpath.
@@ -70,19 +67,5 @@ public interface Event {
      * @param scheduleEvent the custom event, use to execute specific behaviour in the event handler
      */
     void customEvent(CustomEvent scheduleEvent);
-
-    /**
-     * @return collection of strings for all allowed properties
-     */
-    default Collection<String> allowedProperties() {
-        return Collections.emptyList();
-    }
-
-    /**
-     * @return collection of strings for all allowed custom events
-     */
-    default Collection<String> allowedCustomEvents() {
-        return Collections.emptyList();
-    }
 
 }

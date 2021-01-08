@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Peter Paul Bakker, Stokpop Software Solutions
+ * Copyright (C) 2021 Peter Paul Bakker, Stokpop Software Solutions
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,8 @@
 package nl.stokpop.eventscheduler;
 
 import nl.stokpop.eventscheduler.api.*;
+import nl.stokpop.eventscheduler.api.config.EventConfig;
+import nl.stokpop.eventscheduler.api.config.TestConfig;
 import nl.stokpop.eventscheduler.event.EventFactoryProvider;
 import nl.stokpop.eventscheduler.exception.EventCheckFailureException;
 import nl.stokpop.eventscheduler.log.EventLoggerStdOut;
@@ -23,9 +25,9 @@ import org.junit.Test;
 import org.mockito.Mockito;
 
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Optional;
-import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.*;
@@ -48,7 +50,7 @@ public class EventSchedulerTest
         Event event = Mockito.mock(Event.class);
         EventFactory eventFactory = Mockito.mock(EventFactory.class);
 
-        Mockito.when(eventFactory.create(any(), any(), any(), any())).thenReturn(event);
+        Mockito.when(eventFactory.create(any(), any())).thenReturn(event);
         Mockito.when(provider.factoryByClassName(any())).thenReturn(Optional.of(eventFactory));
         EventCheck eventOne = new EventCheck("eventOne", "nl.stokpop.MockEvent", EventStatus.FAILURE, "This event failed!");
         EventCheck eventTwo = new EventCheck("eventTwo", "nl.stokpop.MockEvent", EventStatus.SUCCESS, "This event was ok!");
@@ -67,37 +69,33 @@ public class EventSchedulerTest
                 .setKeepAliveInterval(Duration.ofMinutes(2))
                 .build();
 
-        TestContext context = new TestContextBuilder()
-                .setWorkload("testType")
-                .setTestEnvironment("testEnv")
-                .setTestRunId("testRunId")
-                .setCIBuildResultsUrl("http://url")
-                .setVersion("version")
-                .setRampupTimeInSeconds("10")
-                .setConstantLoadTimeInSeconds("300")
-                .setAnnotations("annotation")
-                .setVariables(Collections.emptyMap())
-                .setTags("tag1,tag2")
-                .build();
+        TestConfig testConfig = TestConfig.builder()
+            .workload("testType")
+            .testEnvironment("testEnv")
+            .testRunId("testRunId")
+            .buildResultsUrl("http://url")
+            .version("version")
+            .rampupTimeInSeconds(10)
+            .constantLoadTimeInSeconds(300)
+            .annotations("annotation")
+            .variables(Collections.emptyMap())
+            .tags(Arrays.asList("tag1","tag2"))
+            .build();
 
-        Properties properties = new Properties();
-        properties.put("name", "value");
-        properties.put(EventProperties.PROP_FACTORY_CLASSNAME, "nl.stokpop.eventscheduler.event.EventFactoryDefault");
-
-        EventScheduler scheduler = new EventSchedulerBuilder()
+        EventScheduler scheduler = new EventSchedulerBuilderInternal()
                 .setEventSchedulerSettings(settings)
-                .setTestContext(context)
+                .setName(testConfig.getTestRunId())
                 .setAssertResultsEnabled(true)
-                .addEvent("myEvent1", properties)
-                .addEvent("myEvent2", properties)
-                .addEvent("myEvent3", properties)
+                .addEvent(EventConfig.builder().name("myEvent1").testConfig(testConfig).build())
+                .addEvent(EventConfig.builder().name("myEvent2").testConfig(testConfig).build())
+                .addEvent(EventConfig.builder().name("myEvent3").testConfig(testConfig).build())
                 .setCustomEvents(eventSchedule)
                 .setLogger(testLogger)
                 .setEventFactoryProvider(provider)
                 .build();
 
-        assertNotNull(scheduler);
         assertEquals(120, settings.getKeepAliveDuration().getSeconds());
+        assertNotNull(scheduler);
 
         scheduler.startSession();
         scheduler.stopSession();
@@ -119,9 +117,6 @@ public class EventSchedulerTest
         Mockito.verify(event, times(3)).afterTest();
         // this seems a timing issue if they are called or not, they are called in ide test, not in gradle test all
         Mockito.verify(event, atMost(3)).keepAlive();
-        // in debug mode called 6 times instead of 3
-        Mockito.verify(event, atMost(6)).allowedProperties();
-        Mockito.verify(event, atMost(6)).allowedCustomEvents();
 
         verifyNoMoreInteractions(ignoreStubs(provider));
         verifyNoMoreInteractions(ignoreStubs(event));
@@ -135,29 +130,13 @@ public class EventSchedulerTest
     @Test
     public void createWithNulls() {
 
-        TestContext context = new TestContextBuilder()
-                .setAnnotations(null)
-                .setVersion(null)
-                .setSystemUnderTest(null)
-                .setCIBuildResultsUrl(null)
-                .setConstantLoadTimeInSeconds(null)
-                .setConstantLoadTime(null)
-                .setRampupTimeInSeconds(null)
-                .setRampupTime(null)
-                .setTestEnvironment(null)
-                .setTestRunId(null)
-                .setWorkload(null)
-                .setVariables((Properties)null)
-                .setTags((String)null)
-                .build();
-
         EventSchedulerSettings settings = new EventSchedulerSettingsBuilder()
                 .setKeepAliveInterval(null)
                 .setKeepAliveTimeInSeconds(null)
                 .build();
 
-        new EventSchedulerBuilder()
-                .setTestContext(context)
+        new EventSchedulerBuilderInternal()
+                .setName("test-run-1")
                 .setEventSchedulerSettings(settings)
                 .setCustomEvents(null)
                 .build();
@@ -175,20 +154,7 @@ public class EventSchedulerTest
 
     @Test
     public void createWithDisabledEvent() {
-
-        TestContext context = new TestContextBuilder().build();
-
-        Properties propertiesEnabled1 = new Properties();
-        propertiesEnabled1.setProperty(EventProperties.PROP_EVENT_ENABLED, "true");
-        propertiesEnabled1.put(EventProperties.PROP_FACTORY_CLASSNAME, "nl.stokpop.eventscheduler.event.EventFactoryDefault");
-
-        Properties propertiesEnabled2 = new Properties();
-        propertiesEnabled2.put(EventProperties.PROP_FACTORY_CLASSNAME, "nl.stokpop.eventscheduler.event.EventFactoryDefault");
-
-        Properties propertiesDisabled = new Properties();
-        propertiesDisabled.setProperty(EventProperties.PROP_EVENT_ENABLED, "false");
-        propertiesDisabled.put(EventProperties.PROP_FACTORY_CLASSNAME, "nl.stokpop.eventscheduler.event.EventFactoryDefault");
-
+        TestConfig testConfig = TestConfig.builder().build();
 
         AtomicInteger countInfoMessages = new AtomicInteger();
 
@@ -202,16 +168,18 @@ public class EventSchedulerTest
             }
         };
 
-        EventScheduler scheduler = new EventSchedulerBuilder()
-                // avoid timing issues: do not use the default async broadcaster
-                .setEventBroadcasterFactory(EventBroadcasterDefault::new)
-                .setTestContext(context)
-                .setLogger(eventLogger)
-                .setAssertResultsEnabled(true)
-                .addEvent("eventEnabled1", propertiesEnabled1)
-                .addEvent("eventEnabled2", propertiesEnabled2)
-                .addEvent("eventDisabled", propertiesDisabled)
-                .build();
+        String eventFactory = "nl.stokpop.eventscheduler.event.EventFactoryDefault";
+        EventScheduler scheduler = new EventSchedulerBuilderInternal()
+            .setName("test-run-1")
+            // avoid timing issues: do not use the default async broadcaster
+            .setEventBroadcasterFactory(EventBroadcasterDefault::new)
+            //.setTestContext(context)
+            .setLogger(eventLogger)
+            .setAssertResultsEnabled(true)
+            .addEvent(EventConfig.builder().name("eventEnabled1").eventFactory(eventFactory).testConfig(testConfig).enabled(true).build())
+            .addEvent(EventConfig.builder().name("eventEnabled2").eventFactory(eventFactory).testConfig(testConfig).enabled(true).build())
+            .addEvent(EventConfig.builder().name("eventDisabled").eventFactory(eventFactory).testConfig(testConfig).enabled(false).build())
+            .build();
 
         // expect "before test" event called for 2 enabled instances
         scheduler.startSession();
@@ -222,14 +190,16 @@ public class EventSchedulerTest
 
     @Test
     public void createWithUnknownProperty()  {
-        Properties properties = new Properties();
-        properties.setProperty(EventProperties.PROP_EVENT_ENABLED, "true");
-        properties.put(EventProperties.PROP_FACTORY_CLASSNAME, "nl.stokpop.eventscheduler.event.EventFactoryDefault");
-        properties.setProperty("unknown", "bar");
+        EventConfig eventConfig = EventConfig.builder()
+            .name("myEvent")
+            .enabled(true)
+            .eventFactory("nl.stokpop.eventscheduler.event.EventFactoryDefault")
+            .testConfig(TestConfig.builder().build())
+            .build();
 
-        EventScheduler scheduler = new EventSchedulerBuilder()
-                .setTestContext(new TestContextBuilder().build())
-                .addEvent("myEvent", properties)
+        EventScheduler scheduler = new EventSchedulerBuilderInternal()
+                .setName("test-run-1")
+                .addEvent(eventConfig)
                 .setLogger(EventLoggerStdOut.INSTANCE_DEBUG)
                 .build();
     }
@@ -239,17 +209,19 @@ public class EventSchedulerTest
 
         EventSchedulerEngine eventSchedulerEngine = mock(EventSchedulerEngine.class);
 
-        Properties properties = new Properties();
-        properties.setProperty(EventProperties.PROP_EVENT_ENABLED, "true");
-        properties.put(EventProperties.PROP_FACTORY_CLASSNAME, "nl.stokpop.eventscheduler.event.EventFactoryDefault");
-        properties.setProperty("unknown", "bar");
+        EventConfig eventConfig = EventConfig.builder()
+            .name("myEvent")
+            .enabled(true)
+            .eventFactory("nl.stokpop.eventscheduler.event.EventFactoryDefault")
+            .testConfig(TestConfig.builder().build())
+            .build();
 
-        EventScheduler scheduler = new EventSchedulerBuilder()
-                .setTestContext(new TestContextBuilder().build())
-                .addEvent("myEvent", properties)
-                .setLogger(EventLoggerStdOut.INSTANCE_DEBUG)
-                .setEventSchedulerEngine(eventSchedulerEngine)
-                .build();
+        EventScheduler scheduler = new EventSchedulerBuilderInternal()
+            .setName("test-run-1")
+            .addEvent(eventConfig)
+            .setLogger(EventLoggerStdOut.INSTANCE_DEBUG)
+            .setEventSchedulerEngine(eventSchedulerEngine)
+            .build();
 
         scheduler.startSession();
 
@@ -260,7 +232,7 @@ public class EventSchedulerTest
         scheduler.abortSession();
 
         // should be called only one time, also for multiple starts in a row
-        Mockito.verify(eventSchedulerEngine, times(1)).startCustomEventScheduler(any(), any(), any(), any());
+        Mockito.verify(eventSchedulerEngine, times(1)).startCustomEventScheduler(any(), any());
 
         // should be called once in stop, not also in abort
         Mockito.verify(eventSchedulerEngine, times(1)).shutdownThreadsNow();

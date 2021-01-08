@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Peter Paul Bakker, Stokpop Software Solutions
+ * Copyright (C) 2021 Peter Paul Bakker, Stokpop Software Solutions
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,10 @@
 package nl.stokpop.eventscheduler;
 
 import nl.stokpop.eventscheduler.api.*;
+import nl.stokpop.eventscheduler.api.config.EventConfig;
 import nl.stokpop.eventscheduler.exception.handler.AbortSchedulerException;
 import nl.stokpop.eventscheduler.exception.handler.KillSwitchException;
+import nl.stokpop.eventscheduler.log.CountErrorsEventLogger;
 import nl.stokpop.eventscheduler.log.EventLoggerStdOut;
 import org.junit.Test;
 
@@ -41,7 +43,9 @@ public class EventBroadcasterTest {
         List<Event> events = new ArrayList<>();
         events.add(myEvent);
 
-        EventBroadcaster broadcaster = new EventBroadcasterAsync(events, EventLoggerStdOut.INSTANCE);
+        CountErrorsEventLogger countErrorsEventLogger = CountErrorsEventLogger.of(EventLoggerStdOut.INSTANCE);
+
+        EventBroadcaster broadcaster = new EventBroadcasterAsync(events, countErrorsEventLogger);
 
         broadcaster.broadcastBeforeTest();
         broadcaster.broadcastKeepAlive();
@@ -56,10 +60,14 @@ public class EventBroadcasterTest {
         verify(myEvent, times(1)).customEvent(scheduleEvent);
         verify(myEvent, times(1)).check();
         verify(myEvent, times(1)).abortTest();
+
+        assertEquals("zero errors expected in logger", 0, countErrorsEventLogger.errorCount());
     }
 
     @Test
     public void broadcastCustomEventWithFailureShouldProceed() {
+
+        CountErrorsEventLogger countErrorsEventLogger = CountErrorsEventLogger.of(EventLoggerStdOut.INSTANCE);
 
         // not multi-threading code, but used as a convenience to change an object in the inner classes below
         // beware: expects a certain order for the events to be called, which can be different depending on implementation
@@ -67,33 +75,33 @@ public class EventBroadcasterTest {
 
         List<Event> events = new ArrayList<>();
         // this should succeed
-        events.add(new MyTestEventThatCanFail(counter, 0, 1));
+        events.add(new MyTestEventThatCanFail(counter, 0, 1, countErrorsEventLogger));
         // this will fail: counter is 0
-        events.add(new MyTestEventThatCanFail(counter, 10, 11));
+        events.add(new MyTestEventThatCanFail(counter, 10, 11, countErrorsEventLogger));
         // this should succeed
-        events.add(new MyTestEventThatCanFail(counter, 1, 2));
+        events.add(new MyTestEventThatCanFail(counter, 1, 2, countErrorsEventLogger));
 
-        EventBroadcaster broadcaster = new EventBroadcasterAsync(events, EventLoggerStdOut.INSTANCE);
+        EventBroadcaster broadcaster = new EventBroadcasterAsync(events, countErrorsEventLogger);
 
         broadcaster.broadcastCustomEvent(CustomEvent.createFromLine("PT1M|test-event"));
 
         broadcaster.shutdownAndWaitAllTasksDone(2);
 
         assertEquals("counter should be set to 2 even though the middle event failed", 2, counter.intValue());
+        assertEquals("one errors expected in logger", 1, countErrorsEventLogger.errorCount());
     }
 
     private static class MyTestEventThatCanFail extends EventAdapter {
-        // just because it is needed...
-        private final static TestContext testContext = new TestContextBuilder().build();
-        private final static EventProperties eventProperties = new EventProperties();
+
+        private final static EventConfig eventConfig = configWithName("MyTestEventThatCanFail");
 
         private AtomicInteger counter;
         private int expectValue;
         private int newValue;
 
 
-        MyTestEventThatCanFail(AtomicInteger counter, int expectValue, int newValue) {
-            super("MyTestEventThatCanFail", testContext, eventProperties, EventLoggerStdOut.INSTANCE);
+        MyTestEventThatCanFail(AtomicInteger counter, int expectValue, int newValue, EventLogger eventLogger) {
+            super(eventConfig, eventLogger);
             this.counter = counter;
             this.expectValue= expectValue;
             this.newValue = newValue;
@@ -107,10 +115,12 @@ public class EventBroadcasterTest {
 
     @Test
     public void broadcastTakesTooLongBehaviourBeforeTest() {
-        // what happens when events "hijack" the event thread?
-        List<Event> events = createTestEvents();
+        CountErrorsEventLogger countErrorsEventLogger = CountErrorsEventLogger.of(EventLoggerStdOut.INSTANCE);
 
-        EventBroadcaster broadcaster = new EventBroadcasterAsync(events, EventLoggerStdOut.INSTANCE);
+        // what happens when events "hijack" the event thread?
+        List<Event> events = createTestEvents(countErrorsEventLogger);
+
+        EventBroadcaster broadcaster = new EventBroadcasterAsync(events, countErrorsEventLogger);
         long startTime = System.currentTimeMillis();
         // blocks to wait for results, but this should not take longer
         // than the longest wait time of a task
@@ -122,14 +132,17 @@ public class EventBroadcasterTest {
         assertTrue("should not take more than a 300 millis! actual: " + durationMillis, durationMillis < 300);
 
         broadcaster.shutdownAndWaitAllTasksDone(2);
+        assertEquals("one errors expected in logger", 1, countErrorsEventLogger.errorCount());
     }
 
     @Test
     public void broadcastTakesTooLongBehaviourCheck() {
-        // what happens when events "hijack" the event thread?
-        List<Event> events = createTestEvents();
+        CountErrorsEventLogger countErrorsEventLogger = CountErrorsEventLogger.of(EventLoggerStdOut.INSTANCE);
 
-        EventBroadcaster broadcaster = new EventBroadcasterAsync(events, EventLoggerStdOut.INSTANCE);
+        // what happens when events "hijack" the event thread?
+        List<Event> events = createTestEvents(countErrorsEventLogger);
+
+        EventBroadcaster broadcaster = new EventBroadcasterAsync(events, countErrorsEventLogger);
 
         long startTime = System.currentTimeMillis();
         List<EventCheck> eventChecks = broadcaster.broadcastCheck();
@@ -142,6 +155,7 @@ public class EventBroadcasterTest {
         assertTrue("should not take more than 600 millis: " + durationMillis, durationMillis < 600);
 
         broadcaster.shutdownAndWaitAllTasksDone(2);
+        assertEquals("five errors expected in logger", 5, countErrorsEventLogger.errorCount());
     }
 
     @Test(expected = KillSwitchException.class)
@@ -183,18 +197,20 @@ public class EventBroadcasterTest {
     public void broadcastKeepAliveWithAbortSchedulerExceptionDefault() {
         List<Event> events = createKillSwitchAndAbortTestEvents();
 
-        EventBroadcaster broadcaster = new EventBroadcasterDefault(events, EventLoggerStdOut.INSTANCE);
+        CountErrorsEventLogger countErrorsEventLogger = CountErrorsEventLogger.of(EventLoggerStdOut.INSTANCE);
+
+        EventBroadcaster broadcaster = new EventBroadcasterDefault(events, countErrorsEventLogger);
 
         broadcaster.broadcastKeepAlive();
 
         broadcaster.shutdownAndWaitAllTasksDone(2);
     }
 
-    private List<Event> createTestEvents() {
-        MySleepyEvent sleepyEvent1 = new MySleepyEvent("sleepy1");
-        MySleepyEvent sleepyEvent2 = new MySleepyEvent("sleepy2");
-        MySleepyEvent sleepyEvent3 = new MySleepyEvent("sleepy3");
-        MyErrorEvent errorEvent = new MyErrorEvent("error1");
+    private List<Event> createTestEvents(EventLogger eventLogger) {
+        MySleepyEvent sleepyEvent1 = new MySleepyEvent(configWithName("sleepy1"), eventLogger);
+        MySleepyEvent sleepyEvent2 = new MySleepyEvent(configWithName("sleepy2"), eventLogger);
+        MySleepyEvent sleepyEvent3 = new MySleepyEvent(configWithName("sleepy3"), eventLogger);
+        MyErrorEvent errorEvent = new MyErrorEvent(configWithName("error1"), eventLogger);
 
         List<Event> events = new ArrayList<>();
         events.add(sleepyEvent1);
@@ -204,9 +220,13 @@ public class EventBroadcasterTest {
         return events;
     }
 
+    private static EventConfig configWithName(String sleepy1) {
+        return EventConfig.builder().name(sleepy1).build();
+    }
+
     private List<Event> createKillSwitchTestEvents() {
-        MyKillSwitchEvent killSwitchEvent1 = new MyKillSwitchEvent("no-killer");
-        MyKillSwitchEvent killSwitchEvent2 = new MyKillSwitchEvent("killer-one");
+        MyKillSwitchEvent killSwitchEvent1 = new MyKillSwitchEvent(configWithName("no-killer"));
+        MyKillSwitchEvent killSwitchEvent2 = new MyKillSwitchEvent(configWithName("killer-one"));
 
         List<Event> events = new ArrayList<>();
         events.add(killSwitchEvent1);
@@ -215,9 +235,9 @@ public class EventBroadcasterTest {
     }
 
     private List<Event> createKillSwitchAndAbortTestEvents() {
-        MyKillSwitchEvent killSwitchEvent1 = new MyKillSwitchEvent("no-killer");
-        MyKillSwitchEvent killSwitchEvent2 = new MyKillSwitchEvent("killer-one");
-        MyKillSwitchEvent killSwitchEvent3 = new MyKillSwitchEvent("abort-one");
+        MyKillSwitchEvent killSwitchEvent1 = new MyKillSwitchEvent(configWithName("no-killer"));
+        MyKillSwitchEvent killSwitchEvent2 = new MyKillSwitchEvent(configWithName("killer-one"));
+        MyKillSwitchEvent killSwitchEvent3 = new MyKillSwitchEvent(configWithName("abort-one"));
 
         List<Event> events = new ArrayList<>();
         events.add(killSwitchEvent1);
@@ -227,12 +247,9 @@ public class EventBroadcasterTest {
     }
 
     private static class MySleepyEvent extends EventAdapter {
-        // just because it is needed...
-        private final static TestContext testContext = new TestContextBuilder().build();
-        private final static EventProperties eventProperties = new EventProperties();
 
-        public MySleepyEvent(String eventName) {
-            super(eventName, testContext, eventProperties, EventLoggerStdOut.INSTANCE_DEBUG);
+        public MySleepyEvent(EventConfig eventConfig, EventLogger eventLogger) {
+            super(eventConfig, eventLogger);
         }
 
         @Override
@@ -247,21 +264,19 @@ public class EventBroadcasterTest {
             logger.info(System.currentTimeMillis() + " Sleep in check in thread: " + Thread.currentThread().getName());
             sleep(500);
             logger.error(System.currentTimeMillis() + " After sleep in check in thread: " + Thread.currentThread().getName());
-             return new EventCheck(eventName, getClass().getSimpleName(), EventStatus.SUCCESS, "All ok");
+             return new EventCheck(eventConfig.getName(), getClass().getSimpleName(), EventStatus.SUCCESS, "All ok");
         }
     }
 
     private static class MyKillSwitchEvent extends EventAdapter {
-        // just because it is needed...
-        private final static TestContext testContext = new TestContextBuilder().build();
-        private final static EventProperties eventProperties = new EventProperties();
 
-        public MyKillSwitchEvent(String eventName) {
-            super(eventName, testContext, eventProperties, EventLoggerStdOut.INSTANCE_DEBUG);
+        public MyKillSwitchEvent(EventConfig eventConfig) {
+            super(eventConfig, EventLoggerStdOut.INSTANCE_DEBUG);
         }
 
         @Override
         public void keepAlive() {
+            String eventName = eventConfig.getName();
             logger.info("keep alive called for " + eventName);
             if (eventName.startsWith("killer")) {
                 throw new KillSwitchException("kill switch requested from " + eventName);
@@ -273,12 +288,9 @@ public class EventBroadcasterTest {
     }
 
     private static class MyErrorEvent extends EventAdapter {
-        // just because it is needed...
-        private final static TestContext testContext = new TestContextBuilder().build();
-        private final static EventProperties eventProperties = new EventProperties();
 
-        public MyErrorEvent(String eventName) {
-            super(eventName, testContext, eventProperties, EventLoggerStdOut.INSTANCE_DEBUG);
+        public MyErrorEvent(EventConfig eventConfig, EventLogger eventLogger) {
+            super(eventConfig, eventLogger);
         }
 
         @Override

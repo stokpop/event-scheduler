@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Peter Paul Bakker, Stokpop Software Solutions
+ * Copyright (C) 2021 Peter Paul Bakker, Stokpop Software Solutions
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,10 +15,13 @@
  */
 package nl.stokpop.eventscheduler;
 
-import nl.stokpop.eventscheduler.api.*;
+import nl.stokpop.eventscheduler.api.CustomEvent;
+import nl.stokpop.eventscheduler.api.EventGenerator;
+import nl.stokpop.eventscheduler.api.EventGeneratorProperties;
 import nl.stokpop.eventscheduler.exception.EventSchedulerRuntimeException;
 import nl.stokpop.eventscheduler.generator.EventGeneratorDefault;
 import nl.stokpop.eventscheduler.generator.EventGeneratorFactoryDefault;
+import nl.stokpop.eventscheduler.log.CountErrorsEventLogger;
 import nl.stokpop.eventscheduler.log.EventLoggerStdOut;
 import org.junit.Test;
 
@@ -43,14 +46,17 @@ public class EventSchedulerEngineTest {
         map.put(EventGeneratorDefault.EVENT_SCHEDULE_TAG, eventsAsText);
         EventGeneratorProperties generatorProperties = new EventGeneratorProperties(map);
 
+        CountErrorsEventLogger countErrorsEventLogger = CountErrorsEventLogger.of(EventLoggerStdOut.INSTANCE);
+
         EventGenerator eventGenerator = new EventGeneratorFactoryDefault()
-                .create(new TestContextBuilder().build(), generatorProperties, EventLoggerStdOut.INSTANCE);
+                .create(generatorProperties, countErrorsEventLogger);
 
         String eventScheduleMessage = EventSchedulerEngine.createEventScheduleMessage(eventGenerator.generate());
 
         System.out.println(eventScheduleMessage);
         String search = "phase";
         assertEquals(3, EventSchedulerUtils.countOccurrences(search, eventScheduleMessage));
+        assertEquals("zero errors expected in logger", 0, countErrorsEventLogger.errorCount());
     }
 
     @Test
@@ -63,9 +69,8 @@ public class EventSchedulerEngineTest {
         events.add(CustomEvent.createFromLine("PT0.4S|my-event(phase 4)"));
         events.add(CustomEvent.createFromLine("PT0.5S|my-event(phase 5)"));
 
-        EventSchedulerEngine engine = new EventSchedulerEngine(EventLoggerStdOut.INSTANCE);
-
-        TestContext context = new TestContextBuilder().build();
+        CountErrorsEventLogger countErrorsEventLogger = CountErrorsEventLogger.of(EventLoggerStdOut.INSTANCE);
+        EventSchedulerEngine engine = new EventSchedulerEngine(countErrorsEventLogger);
 
         EventBroadcaster eventBroadcaster = mock(EventBroadcaster.class);
         // expect 5 calls, two will throw an Exception, see if flow continues
@@ -76,8 +81,7 @@ public class EventSchedulerEngineTest {
                 .doNothing()
                 .when(eventBroadcaster).broadcastCustomEvent(any());
 
-        EventProperties eventProperties = new EventProperties();
-        engine.startCustomEventScheduler(context, events, eventBroadcaster, eventProperties);
+        engine.startCustomEventScheduler(events, eventBroadcaster);
 
         // check if all events are called at 100, 200, 300, 400 and 500 ms
         Thread.sleep(600);
@@ -86,6 +90,7 @@ public class EventSchedulerEngineTest {
 
         verify(eventBroadcaster, times(5))
                 .broadcastCustomEvent(any(CustomEvent.class));
+        assertEquals("two errors expected in logger", 2, countErrorsEventLogger.errorCount());
     }
 
 }

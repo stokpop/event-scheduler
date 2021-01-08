@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Peter Paul Bakker, Stokpop Software Solutions
+ * Copyright (C) 2021 Peter Paul Bakker, Stokpop Software Solutions
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,18 +19,17 @@ import nl.stokpop.eventscheduler.api.CustomEvent;
 import nl.stokpop.eventscheduler.api.EventAdapter;
 import nl.stokpop.eventscheduler.api.EventCheck;
 import nl.stokpop.eventscheduler.api.EventLogger;
-import nl.stokpop.eventscheduler.api.EventProperties;
-import nl.stokpop.eventscheduler.api.TestContext;
+import nl.stokpop.eventscheduler.api.config.EventConfig;
 
 public class EventDefault extends EventAdapter {
 
-    EventDefault(String eventName, TestContext testContext, EventProperties eventProperties, EventLogger logger) {
-        super(eventName, testContext, eventProperties, logger);
+    EventDefault(EventConfig eventConfig, EventLogger logger) {
+        super(eventConfig, logger);
     }
 
     @Override
     public void beforeTest() {
-        logger.info("Before test: " + testContext.getTestRunId());
+        logger.info("Before test: " + eventConfig.getTestConfig().getTestRunId());
     }
 
     @Override

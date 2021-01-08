@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Peter Paul Bakker, Stokpop Software Solutions
+ * Copyright (C) 2021 Peter Paul Bakker, Stokpop Software Solutions
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,16 +17,13 @@ package nl.stokpop.eventscheduler;
 
 import nl.stokpop.eventscheduler.api.EventSchedulerSettings;
 import nl.stokpop.eventscheduler.api.EventSchedulerSettingsBuilder;
-import nl.stokpop.eventscheduler.api.TestContext;
-import nl.stokpop.eventscheduler.api.TestContextBuilder;
+import nl.stokpop.eventscheduler.api.config.EventConfig;
+import nl.stokpop.eventscheduler.api.config.TestConfig;
 import nl.stokpop.eventscheduler.exception.EventSchedulerRuntimeException;
 import org.junit.Test;
 
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
 
 public class EventSchedulerBuilderTest {
 
@@ -35,10 +32,10 @@ public class EventSchedulerBuilderTest {
          String alternativeClassCustomEvents = "  @generatorFactoryClass=nl.stokpop.eventscheduler.generator.EventGeneratorFactoryDefault\n" +
                  "  my-setting=my-value \n";
 
-         EventSchedulerBuilder eventSchedulerBuilder = new EventSchedulerBuilder()
-                 .setCustomEvents(alternativeClassCustomEvents)
-                 .setTestContext(new TestContextBuilder().build())
-                 .setEventSchedulerSettings(new EventSchedulerSettingsBuilder().build());
+         EventSchedulerBuilderInternal eventSchedulerBuilder = new EventSchedulerBuilderInternal()
+             .setName("test-run-1")
+             .setCustomEvents(alternativeClassCustomEvents)
+             .setEventSchedulerSettings(new EventSchedulerSettingsBuilder().build());
 
         ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
         EventScheduler eventScheduler =
@@ -69,33 +66,33 @@ public class EventSchedulerBuilderTest {
      */
     @Test
     public void testFactoriesAndBroadcaster() {
-        EventSchedulerBuilder builder = new EventSchedulerBuilder();
-
-        TestContext testContext = new TestContextBuilder().build();
+        EventSchedulerBuilderInternal builder = new EventSchedulerBuilderInternal();
 
         EventSchedulerSettingsBuilder eventSchedulerSettingsBuilder = new EventSchedulerSettingsBuilder();
         EventSchedulerSettings eventSchedulerSettings = eventSchedulerSettingsBuilder.build();
 
-        builder.setTestContext(testContext);
+        builder.setName("test-run-1");
         builder.setEventSchedulerSettings(eventSchedulerSettings);
 
         String factoryClassName = "nl.stokpop.eventscheduler.event.EventFactoryDefault";
 
-        Map<String, String> properties = new HashMap<>();
-        properties.put("eventFactory", factoryClassName);
-        properties.put("wiremockEnabled", "true");
-        properties.put("wiremockFilesDir", "src/test/resources/wiremock");
-        properties.put("wiremockUrl", "https://site.a/");
+        TestConfig testConfig = TestConfig.builder().build();
 
-        builder.addEvent("Event1", properties);
+        EventConfig eventConfig = new EventConfig();
+        eventConfig.setName("Event1");
+        eventConfig.setEventFactory(factoryClassName);
+        eventConfig.setEnabled(true);
+        eventConfig.setTestConfig(testConfig);
 
-        Map<String, String> properties2 = new HashMap<>();
-        properties2.put("eventFactory", factoryClassName);
-        properties2.put("wiremockEnabled", "true");
-        properties2.put("wiremockFilesDir", "src/test/resources/wiremock");
-        properties2.put("wiremockUrl", "https://site.b/");
+        builder.addEvent(eventConfig);
 
-        builder.addEvent("Event2", properties);
+        EventConfig eventConfig2 = new EventConfig();
+        eventConfig2.setName("Event2");
+        eventConfig2.setEventFactory(factoryClassName);
+        eventConfig2.setEnabled(true);
+        eventConfig2.setTestConfig(testConfig);
+
+        builder.addEvent(eventConfig2);
 
         EventScheduler eventScheduler = builder.build();
 
@@ -104,9 +101,9 @@ public class EventSchedulerBuilderTest {
 
     @Test(expected = EventSchedulerRuntimeException.class)
     public void testUniqueEventNameCheck() {
-        EventSchedulerBuilder builder = new EventSchedulerBuilder();
-        builder.addEvent("one", Collections.emptyMap());
-        builder.addEvent("one", Collections.emptyMap());
+        EventSchedulerBuilderInternal builder = new EventSchedulerBuilderInternal();
+        builder.addEvent(EventConfig.builder().name("one").build());
+        builder.addEvent(EventConfig.builder().name("one").build());
     }
 
 }

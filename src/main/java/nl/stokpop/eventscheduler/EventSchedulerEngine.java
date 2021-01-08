@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Peter Paul Bakker, Stokpop Software Solutions
+ * Copyright (C) 2021 Peter Paul Bakker, Stokpop Software Solutions
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,8 +40,8 @@ class EventSchedulerEngine {
         this.logger = logger;
     }
 
-    void startKeepAliveThread(TestContext context, EventSchedulerSettings settings, EventBroadcaster broadcaster, EventProperties eventProperties, SchedulerExceptionHandler schedulerExceptionHandler) {
-        nullChecks(context, broadcaster, eventProperties);
+    void startKeepAliveThread(String name, EventSchedulerSettings settings, EventBroadcaster broadcaster, SchedulerExceptionHandler schedulerExceptionHandler) {
+        nullChecks(name, broadcaster);
 
         if (executorKeepAlive != null) {
             throw new RuntimeException("cannot start keep alive thread multiple times!");
@@ -51,20 +51,21 @@ class EventSchedulerEngine {
 
         executorKeepAlive = createKeepAliveScheduler();
         
-        KeepAliveRunner keepAliveRunner = new KeepAliveRunner(context, broadcaster, eventProperties, schedulerExceptionHandler);
+        KeepAliveRunner keepAliveRunner = new KeepAliveRunner(name, broadcaster, schedulerExceptionHandler);
         executorKeepAlive.scheduleAtFixedRate(keepAliveRunner, 0, settings.getKeepAliveDuration().getSeconds(), TimeUnit.SECONDS);
     }
 
-    private void nullChecks(TestContext context, EventBroadcaster broadcaster, EventProperties eventProperties) {
-        if (context == null) {
-            throw new NullPointerException("TestContext cannot be null");
-        }
+    private void nullChecks(EventBroadcaster broadcaster) {
         if (broadcaster == null) {
-            throw new NullPointerException("EventBroadcaster cannot be null");
+            throw new NullPointerException("eventBroadcaster cannot be null");
         }
-        if (eventProperties == null) {
-            throw new NullPointerException("EventProperties cannot be null");
+    }
+
+    private void nullChecks(String name, EventBroadcaster broadcaster) {
+        if (name == null) {
+            throw new NullPointerException("name cannot be null");
         }
+        nullChecks(broadcaster);
     }
 
     private void addToExecutor(ScheduledExecutorService executorService, CustomEvent event, EventBroadcaster broadcaster) {
@@ -91,8 +92,8 @@ class EventSchedulerEngine {
         executorCustomEvents = null;
     }
 
-    void startCustomEventScheduler(TestContext context, List<CustomEvent> scheduleEvents, EventBroadcaster broadcaster, EventProperties eventProperties) {
-        nullChecks(context, broadcaster, eventProperties);
+    void startCustomEventScheduler(List<CustomEvent> scheduleEvents, EventBroadcaster broadcaster) {
+        nullChecks(broadcaster);
 
         if (!(scheduleEvents == null || scheduleEvents.isEmpty())) {
 
@@ -137,15 +138,13 @@ class EventSchedulerEngine {
     
     class KeepAliveRunner implements Runnable {
 
-        private final TestContext context;
+        private final String name;
         private final EventBroadcaster broadcaster;
-        private final EventProperties eventProperties;
         private final SchedulerExceptionHandler schedulerExceptionHandler;
 
-        KeepAliveRunner(TestContext context, EventBroadcaster broadcaster, EventProperties eventProperties, SchedulerExceptionHandler schedulerExceptionHandler) {
-            this.context = context;
+        KeepAliveRunner(String name, EventBroadcaster broadcaster, SchedulerExceptionHandler schedulerExceptionHandler) {
+            this.name = name;
             this.broadcaster = broadcaster;
-            this.eventProperties = eventProperties;
             this.schedulerExceptionHandler = schedulerExceptionHandler;
         }
 
@@ -179,7 +178,7 @@ class EventSchedulerEngine {
 
         @Override
         public String toString() {
-            return "KeepAliveRunner for " + context.getTestRunId();
+            return "KeepAliveRunner: " + name;
         }
     }
 

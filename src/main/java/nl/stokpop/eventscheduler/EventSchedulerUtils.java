@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Peter Paul Bakker, Stokpop Software Solutions
+ * Copyright (C) 2021 Peter Paul Bakker, Stokpop Software Solutions
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@ public class EventSchedulerUtils {
         try {
             time = Integer.parseInt(numberString);
         } catch (NumberFormatException e) {
-            System.err.println(String.format("unable to parse value of [%s=%s]: using default value [%d]. Error message: %s.", variableName, numberString, defaultValue, e.getMessage()));
+            System.err.printf("unable to parse value of [%s=%s]: using default value [%d]. Error message: %s.%n", variableName, numberString, defaultValue, e.getMessage());
             time = defaultValue;
         }
         return time;

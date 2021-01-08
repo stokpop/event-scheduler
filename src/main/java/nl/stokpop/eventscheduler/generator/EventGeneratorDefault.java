@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Peter Paul Bakker, Stokpop Software Solutions
+ * Copyright (C) 2021 Peter Paul Bakker, Stokpop Software Solutions
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@ import nl.stokpop.eventscheduler.api.CustomEvent;
 import nl.stokpop.eventscheduler.api.EventGenerator;
 import nl.stokpop.eventscheduler.api.EventGeneratorProperties;
 import nl.stokpop.eventscheduler.api.EventLogger;
-import nl.stokpop.eventscheduler.api.TestContext;
 import nl.stokpop.eventscheduler.exception.EventSchedulerRuntimeException;
 
 import java.io.BufferedReader;
@@ -35,7 +34,7 @@ public class EventGeneratorDefault implements EventGenerator {
 
     private final EventGeneratorProperties properties;
 
-    EventGeneratorDefault(TestContext context, EventGeneratorProperties properties, EventLogger logger) {
+    EventGeneratorDefault(EventGeneratorProperties properties, EventLogger logger) {
         this.properties = properties;
     }
 

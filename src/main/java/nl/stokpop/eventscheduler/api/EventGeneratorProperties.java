@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Peter Paul Bakker, Stokpop Software Solutions
+ * Copyright (C) 2021 Peter Paul Bakker, Stokpop Software Solutions
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -62,7 +62,7 @@ public class EventGeneratorProperties {
     }
 
     public EventGeneratorProperties() {
-        properties = Collections.unmodifiableMap(Collections.emptyMap());
+        properties = Collections.emptyMap();
     }
 
     public EventGeneratorProperties(String propsAsText) {

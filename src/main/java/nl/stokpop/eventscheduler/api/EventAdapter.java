@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Peter Paul Bakker, Stokpop Software Solutions
+ * Copyright (C) 2021 Peter Paul Bakker, Stokpop Software Solutions
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,8 @@
  */
 package nl.stokpop.eventscheduler.api;
 
+import nl.stokpop.eventscheduler.api.config.EventConfig;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Set;
@@ -28,36 +30,32 @@ import java.util.TreeSet;
  */
 public abstract class EventAdapter implements Event {
 
-    protected final String eventName;
-    protected final TestContext testContext;
-    protected final EventProperties eventProperties;
+    protected final EventConfig eventConfig;
     protected final EventLogger logger;
 
-    public EventAdapter(String eventName, TestContext testContext, EventProperties eventProperties, EventLogger logger) {
-        this.eventName = eventName;
-        this.testContext = testContext;
-        this.eventProperties = eventProperties;
+    public EventAdapter(EventConfig eventConfig, EventLogger logger) {
+        this.eventConfig = eventConfig;
         this.logger = logger;
     }
 
     @Override
     public void beforeTest() {
-        logger.debug(String.format("[%s] [%s] beforeTest (not implemented)", eventName, this.getClass().getName()));
+        logger.debug(String.format("[%s] [%s] beforeTest (not implemented)", eventConfig.getName(), this.getClass().getName()));
     }
 
     @Override
     public void afterTest() {
-        logger.debug(String.format("[%s] [%s] afterTest (not implemented)", eventName, this.getClass().getName()));
+        logger.debug(String.format("[%s] [%s] afterTest (not implemented)", eventConfig.getName(), this.getClass().getName()));
     }
 
     @Override
     public void keepAlive() {
-        logger.debug(String.format("[%s] [%s] keepAlive (not implemented)", eventName, this.getClass().getName()));
+        logger.debug(String.format("[%s] [%s] keepAlive (not implemented)", eventConfig.getName(), this.getClass().getName()));
     }
 
     @Override
     public void abortTest() {
-        logger.debug(String.format("[%s] [%s] abortTest (not implemented)", eventName, this.getClass().getName()));
+        logger.debug(String.format("[%s] [%s] abortTest (not implemented)", eventConfig.getName(), this.getClass().getName()));
     }
 
     @Override
@@ -67,12 +65,12 @@ public abstract class EventAdapter implements Event {
 
     @Override
     public void customEvent(CustomEvent customEvent) {
-        logger.debug(String.format("[%s] [%s] [%s] customEvent (not implemented)", eventName, this.getClass().getName(), customEvent.getName()));
+        logger.debug(String.format("[%s] [%s] [%s] customEvent (not implemented)", eventConfig.getName(), this.getClass().getName(), customEvent.getName()));
     }
 
     @Override
     public final String getName() {
-        return eventName;
+        return eventConfig.getName();
     }
 
     /**

@@ -17,55 +17,55 @@ package nl.stokpop.eventscheduler.log;
 
 import nl.stokpop.eventscheduler.api.EventLogger;
 
-public class EventLoggerWithName implements EventLogger {
+import java.util.concurrent.atomic.AtomicInteger;
 
-    private final String name;
-    private final String classname;
-    private final EventLogger logger;
+public class CountErrorsEventLogger implements EventLogger {
 
-    public EventLoggerWithName(String name, String classname, EventLogger logger) {
-        this.name = name;
-        this.classname = removePackages(classname);
-        this.logger = logger;
+    private EventLogger wrappedEventLogger;
+
+    private AtomicInteger errorCounter = new AtomicInteger(0);
+
+    private CountErrorsEventLogger(EventLogger wrappedEventLogger) {
+        this.wrappedEventLogger = wrappedEventLogger;
     }
 
-    private String removePackages(String classname) {
-        if (classname.contains(".")) {
-            return classname.substring(classname.lastIndexOf('.') + 1);
-        }
-        else {
-            return classname;
-        }
+    public static CountErrorsEventLogger of(EventLogger eventLogger) {
+        return new CountErrorsEventLogger(eventLogger);
     }
-
 
     @Override
     public void info(String message) {
-        logger.info(String.format("[%s] [%s] %s", name, classname, message));
+        wrappedEventLogger.info(message);
     }
 
     @Override
     public void warn(String message) {
-        logger.warn(String.format("[%s] [%s] %s", name, classname, message));
+        wrappedEventLogger.warn(message);
     }
 
     @Override
     public void error(String message) {
-        logger.error(String.format("[%s] [%s] %s", name, classname, message));
+        errorCounter.incrementAndGet();
+        wrappedEventLogger.error(message);
     }
 
     @Override
     public void error(String message, Throwable throwable) {
-        logger.error(String.format("[%s] [%s] %s", name, classname, message), throwable);
+        errorCounter.incrementAndGet();
+        wrappedEventLogger.error(message, throwable);
     }
 
     @Override
     public void debug(String message) {
-        logger.debug(String.format("[%s] [%s] %s", name, classname, message));
+        wrappedEventLogger.debug(message);
     }
 
     @Override
     public boolean isDebugEnabled() {
-        return true;
+        return wrappedEventLogger.isDebugEnabled();
+    }
+
+    public int errorCount() {
+        return errorCounter.get();
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Peter Paul Bakker, Stokpop Software Solutions
+ * Copyright (C) 2021 Peter Paul Bakker, Stokpop Software Solutions
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,5 +19,5 @@ package nl.stokpop.eventscheduler.api;
  * Create an EventGenerator based on the given test context and properties.
  */
 public interface EventGeneratorFactory {
-    EventGenerator create(TestContext context, EventGeneratorProperties properties, EventLogger logger);
+    EventGenerator create(EventGeneratorProperties properties, EventLogger logger);
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Peter Paul Bakker, Stokpop Software Solutions
+ * Copyright (C) 2021 Peter Paul Bakker, Stokpop Software Solutions
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,13 +17,20 @@ package nl.stokpop.eventscheduler.test;
 
 import nl.stokpop.eventscheduler.EventScheduler;
 import nl.stokpop.eventscheduler.EventSchedulerBuilder;
-import nl.stokpop.eventscheduler.api.*;
+import nl.stokpop.eventscheduler.api.EventSchedulerSettings;
+import nl.stokpop.eventscheduler.api.EventSchedulerSettingsBuilder;
+import nl.stokpop.eventscheduler.api.config.EventConfig;
+import nl.stokpop.eventscheduler.api.config.EventSchedulerConfig;
+import nl.stokpop.eventscheduler.api.config.TestConfig;
+import nl.stokpop.eventscheduler.log.CountErrorsEventLogger;
 import nl.stokpop.eventscheduler.log.EventLoggerStdOut;
 import org.junit.Test;
 
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
-import java.util.Properties;
+import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -36,55 +43,67 @@ public class EventSchedulerFromOutsidePackageTest
     @Test
     public void createEventSchedulerAndFireSomeEvents() {
 
-        EventLogger testLogger = EventLoggerStdOut.INSTANCE;
+        CountErrorsEventLogger countErrorsEventLogger = CountErrorsEventLogger.of(EventLoggerStdOut.INSTANCE);
 
-        String eventSchedule =
+        String scheduleScript1 =
                 "   \n" +
-                "    PT1S  |restart   (   restart to reset replicas  )   |{ 'server':'myserver' 'replicas':2, 'tags': [ 'first', 'second' ] }    \n" +
                 "PT600S   |scale-down |   { 'replicas':1 }   \n" +
                 "PT660S|    heapdump|server=    myserver.example.com;   port=1567  \n" +
-                "   PT900S|scale-up|{ 'replicas':2 }\n" +
+                "  \n";
+
+        String scheduleScript2 =
+                "   \n" +
+                "    PT1S  |restart   (   restart to reset replicas  )   |{ 'server':'myserver' 'replicas':2, 'tags': [ 'first', 'second' ] }    \n" +
+                "PT660S|    heapdump|server=    myserver.example.com;   port=1567  \n" +
                 "  \n";
 
         EventSchedulerSettings settings = new EventSchedulerSettingsBuilder()
                 .setKeepAliveInterval(Duration.ofMinutes(2))
                 .build();
 
-        TestContext context = new TestContextBuilder()
-                .setWorkload("testType")
-                .setTestEnvironment("testEnv")
-                .setTestRunId("testRunId")
-                .setCIBuildResultsUrl("http://url")
-                .setVersion("release")
-                .setRampupTimeInSeconds("10")
-                .setConstantLoadTimeInSeconds("300")
-                .setAnnotations("annotation")
-                .setVariables(Collections.emptyMap())
-                .setTags("tag1,tag2")
-                .build();
+        TestConfig testConfig = TestConfig.builder()
+            .workload("testType")
+            .testEnvironment("testEnv")
+            .testRunId("testRunId")
+            .buildResultsUrl("http://url")
+            .version("version")
+            .rampupTimeInSeconds(10)
+            .constantLoadTimeInSeconds(300)
+            .annotations("annotation")
+            .variables(Collections.emptyMap())
+            .tags(Arrays.asList("tag1","tag2"))
+            .build();
 
-        Properties properties = new Properties();
-        properties.put("name", "value");
         // this class really needs to be on the classpath, otherwise: runtime exception, not found on classpath
-        properties.put(EventProperties.PROP_FACTORY_CLASSNAME, "nl.stokpop.eventscheduler.event.EventFactoryDefault");
+        String factoryClassName = "nl.stokpop.eventscheduler.event.EventFactoryDefault";
 
-        EventScheduler scheduler = new EventSchedulerBuilder()
-                .setEventSchedulerSettings(settings)
-                .setTestContext(context)
-                .setAssertResultsEnabled(true)
-                .addEvent("myEvent1", properties)
-                .addEvent("myEvent2", properties)
-                .addEvent("myEvent3", properties)
-                .setCustomEvents(eventSchedule)
-                .setLogger(testLogger)
-                .build();
+        List<EventConfig> eventConfigs = new ArrayList<>();
+        eventConfigs.add(EventConfig.builder().name("myEvent1").eventFactory(factoryClassName).scheduleScript(scheduleScript2).build());
+        eventConfigs.add(EventConfig.builder().name("myEvent2").eventFactory(factoryClassName).build());
+        eventConfigs.add(EventConfig.builder().name("myEvent3").eventFactory(factoryClassName).build());
+
+        EventSchedulerConfig eventSchedulerConfig = EventSchedulerConfig.builder()
+            .schedulerEnabled(true)
+            .debugEnabled(false)
+            .continueOnAssertionFailure(false)
+            .failOnError(true)
+            .testConfig(testConfig)
+            .eventConfigs(eventConfigs)
+            .scheduleScript(scheduleScript1)
+            .build();
+
+        EventScheduler scheduler = EventSchedulerBuilder.of(eventSchedulerConfig, countErrorsEventLogger);
+
+        assertEquals("4 lines expected in total scheduler script", 4, eventSchedulerConfig.getScheduleScript().split("\\n").length);
 
         assertNotNull(scheduler);
         assertEquals(120, settings.getKeepAliveDuration().getSeconds());
-
         scheduler.startSession();
         scheduler.stopSession();
+
         // no failure exception expected
+        assertEquals("zero errors expected in logger", 0, countErrorsEventLogger.errorCount());
         scheduler.checkResults();
     }
+
 }

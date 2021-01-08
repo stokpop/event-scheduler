@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Peter Paul Bakker, Stokpop Software Solutions
+ * Copyright (C) 2021 Peter Paul Bakker, Stokpop Software Solutions
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,18 +15,19 @@
  */
 package nl.stokpop.eventscheduler;
 
-import net.jcip.annotations.Immutable;
 import net.jcip.annotations.NotThreadSafe;
-import nl.stokpop.eventscheduler.api.*;
-import nl.stokpop.eventscheduler.event.EventFactoryProvider;
+import nl.stokpop.eventscheduler.api.EventLogger;
+import nl.stokpop.eventscheduler.api.EventSchedulerSettings;
+import nl.stokpop.eventscheduler.api.EventSchedulerSettingsBuilder;
+import nl.stokpop.eventscheduler.api.config.EventConfig;
+import nl.stokpop.eventscheduler.api.config.EventSchedulerConfig;
+import nl.stokpop.eventscheduler.api.config.TestConfig;
 import nl.stokpop.eventscheduler.exception.EventSchedulerRuntimeException;
-import nl.stokpop.eventscheduler.generator.EventGeneratorDefault;
-import nl.stokpop.eventscheduler.generator.EventGeneratorFactoryDefault;
-import nl.stokpop.eventscheduler.generator.EventGeneratorFactoryProvider;
-import nl.stokpop.eventscheduler.log.EventLoggerDevNull;
-import nl.stokpop.eventscheduler.log.EventLoggerWithName;
 
-import java.util.*;
+import java.time.Duration;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -34,296 +35,111 @@ import java.util.stream.Collectors;
  */
 @NotThreadSafe
 public class EventSchedulerBuilder {
-    
-    private final Set<EventInfo> eventInfos = new HashSet<>();
 
-    private TestContext testContext;
-
-    private EventSchedulerSettings eventSchedulerSettings;
-
-    private boolean assertResultsEnabled = false;
-
-    private EventProperties eventProperties = new EventProperties();
-
-    private String customEventsText = "";
-
-    private EventLogger logger = EventLoggerDevNull.INSTANCE;
-
-    private EventFactoryProvider eventFactoryProvider;
-
-    private EventBroadcasterFactory eventBroadcasterFactory;
-
-    private SchedulerExceptionHandler schedulerExceptionHandler;
-
-    private EventSchedulerEngine eventSchedulerEngine;
-
-    public EventSchedulerBuilder setEventSchedulerEngine(EventSchedulerEngine executorEngine) {
-        this.eventSchedulerEngine = executorEngine;
-        return this;
-    }
-
-    public EventSchedulerBuilder setSchedulerExceptionHandler(SchedulerExceptionHandler callback) {
-        this.schedulerExceptionHandler = callback;
-        return this;
-    }
-    public EventSchedulerBuilder setTestContext(TestContext context) {
-        this.testContext = context;
-        return this;
-    }
-
-    public EventSchedulerBuilder setLogger(EventLogger logger) {
-        this.logger = logger;
-        return this;
-    }
-
-    public EventSchedulerBuilder setEventSchedulerSettings(EventSchedulerSettings settings) {
-        this.eventSchedulerSettings = settings;
-        return this;
-    }
-
-    public EventSchedulerBuilder setAssertResultsEnabled(boolean assertResultsEnabled) {
-        this.assertResultsEnabled = assertResultsEnabled;
-        return this;
-    }
-
-    public EventScheduler build() {
-        return build(null);
+    public static EventScheduler of(EventSchedulerConfig eventSchedulerConfig, EventLogger logger) {
+        return of(eventSchedulerConfig, logger, null);
     }
 
     /**
-     * Clients can use this build method to define a different classloader.
-     *
-     * By default the classloader from the current thread is used to load event providers and related resources.
-     *
-     * For example in a Gradle plugin the thread classpath is limited to plugin classes,
-     * and does not contain classes from the project context, such as the custom event providers used in the project.
-     *
-     * @param classLoader the class loader, if null the default classloader of Java's ServiceLoader will be used
-     * @return a new EventScheduler
+     * Create an EventScheduler from an EventSchedulerConfig.
+     * @param eventSchedulerConfig note that this eventSchedulerConfig will be modified in this method (beh: better make immutable)
+     * @param logger the EventLogger for log lines from the EventScheduler and its construction
+     * @param classLoader needed in cased where the dynamic class creation does not work in default classloader, can be null
+     * @return a fully constructed EventScheduler
      */
-    public EventScheduler build(ClassLoader classLoader) {
-        
-        if (testContext == null) {
-            throw new EventSchedulerRuntimeException("TestContext must be set, it is null.");
+    public static EventScheduler of(EventSchedulerConfig eventSchedulerConfig, EventLogger logger, ClassLoader classLoader) {
+
+        final TestConfig topLevelConfig = determineTopLevelConfigAndInjectInEventConfigs(eventSchedulerConfig, logger);
+
+        String totalScheduleScript = collectScheduleScriptsInTopLevelConfig(eventSchedulerConfig);
+        eventSchedulerConfig.setScheduleScript(totalScheduleScript);
+
+        EventSchedulerSettings settings = new EventSchedulerSettingsBuilder()
+            .setKeepAliveInterval(Duration.ofSeconds(eventSchedulerConfig.getKeepAliveIntervalInSeconds()))
+            .build();
+
+        EventSchedulerBuilderInternal eventSchedulerBuilder = new EventSchedulerBuilderInternal()
+            .setName(topLevelConfig.getTestRunId())
+            .setEventSchedulerSettings(settings)
+            .setAssertResultsEnabled(eventSchedulerConfig.isSchedulerEnabled())
+            .setCustomEvents(eventSchedulerConfig.getScheduleScript())
+            .setLogger(logger);
+
+        if (eventSchedulerConfig.getEventConfigs() != null) {
+            eventSchedulerConfig.getEventConfigs().forEach(eventSchedulerBuilder::addEvent);
         }
 
-        EventSchedulerSettings myEventSchedulerSettings = (eventSchedulerSettings == null)
-                ? new EventSchedulerSettingsBuilder().build()
-                : eventSchedulerSettings;
-        
-        List<CustomEvent> customEvents =
-                generateCustomEventSchedule(testContext, customEventsText, logger, classLoader);
-
-        EventFactoryProvider provider = (eventFactoryProvider == null)
-                ? EventFactoryProvider.createInstanceFromClasspath(classLoader)
-                : eventFactoryProvider;
-
-        eventInfos.stream()
-                .filter(e -> !e.getEventProperties().isEventEnabled())
-                .forEach(e -> logger.info("Event disabled: " + e.eventName));
-
-        List<Event> events = eventInfos.stream()
-                .filter(e -> e.getEventProperties().isEventEnabled())
-                .map(p -> createEvent(provider, p, testContext))
-                .collect(Collectors.toList());
-
-        EventBroadcasterFactory broadcasterFactory = (eventBroadcasterFactory == null)
-                ? EventBroadcasterAsync::new
-                : eventBroadcasterFactory;
-
-        EventBroadcaster broadcaster = broadcasterFactory.create(events, logger);
-
-        eventSchedulerEngine = (eventSchedulerEngine == null)
-            ? new EventSchedulerEngine(logger)
-            : eventSchedulerEngine;
-
-        return new EventScheduler(
-            testContext,
-            myEventSchedulerSettings,
-            assertResultsEnabled,
-            broadcaster,
-            eventProperties,
-            customEvents,
-            logger,
-            eventSchedulerEngine,
-            schedulerExceptionHandler);
+        return eventSchedulerBuilder.build(classLoader);
     }
 
-    private Event createEvent(EventFactoryProvider provider, EventInfo eventInfo, TestContext testContext) {
-        EventProperties eventProperties = eventInfo.getEventProperties();
-        String factoryClassName = eventProperties.getFactoryClassName();
-        String eventName = eventInfo.getEventName();
-        EventLogger eventLogger = new EventLoggerWithName(eventName, removeFactoryPostfix(factoryClassName), logger);
+    private static String collectScheduleScriptsInTopLevelConfig(EventSchedulerConfig eventSchedulerConfig) {
+        String topLevelScheduleScript = eventSchedulerConfig.getScheduleScript();
 
-        Event event = provider.factoryByClassName(factoryClassName)
-                .orElseThrow(() -> new RuntimeException(factoryClassName + " not found on classpath"))
-                .create(eventName, testContext, eventProperties, eventLogger);
+        String subScheduleScripts = eventSchedulerConfig.getEventConfigs().stream()
+            .map(EventConfig::getScheduleScript)
+            .filter(Objects::nonNull)
+            .collect(Collectors.joining("\n"));
 
-        Collection<String> allowedProperties = event.allowedProperties();
-        eventProperties.checkUnknownProperties(allowedProperties,
-                (key, value) -> eventLogger.warn(String.format("unknown property found: '%s' with value: '%s'. Choose from: %s", key, value, allowedProperties)));
-
-        if (logger.isDebugEnabled()) {
-            logger.debug("allowed properties: " + event.allowedProperties());
-            logger.debug("allowed events    : " + event.allowedCustomEvents());
-        }
-
-        return event;
-    }
-
-    private String removeFactoryPostfix(String factoryClassName) {
-        int index = factoryClassName.indexOf("Factory");
-        return index != -1 ? factoryClassName.substring(0, index) : factoryClassName;
-    }
-
-    private List<CustomEvent> generateCustomEventSchedule(TestContext context, String text, EventLogger logger, ClassLoader classLoader) {
-        EventGenerator eventGenerator;
-        EventGeneratorProperties eventGeneratorProperties;
-
-        if (text == null) {
-            eventGeneratorProperties = new EventGeneratorProperties();
-            EventLoggerWithName myLogger = new EventLoggerWithName("defaultFactory", EventGeneratorDefault.class.getName(), logger);
-            eventGenerator = new EventGeneratorFactoryDefault().create(testContext, eventGeneratorProperties, myLogger);
-        }
-        else if (EventGeneratorProperties.hasLinesThatStartWithMetaPropertyPrefix(text)) {
-
-            eventGeneratorProperties = new EventGeneratorProperties(text);
-
-            String generatorClassname = eventGeneratorProperties.getMetaProperty(EventGeneratorMetaProperty.generatorFactoryClass.name());
-
-            EventGeneratorFactory eventGeneratorFactory = findAndCreateEventScheduleGenerator(logger, generatorClassname, classLoader);
-
-            EventLoggerWithName myLogger = new EventLoggerWithName("customFactory", generatorClassname, logger);
-            eventGenerator = eventGeneratorFactory.create(context, eventGeneratorProperties, myLogger);
+        if (topLevelScheduleScript == null) {
+            return removeEmptyLines(subScheduleScripts);
         }
         else {
-            // assume the default input of lines of events
-            Map<String, String> properties = new HashMap<>();
-            properties.put("eventSchedule", text);
-
-            eventGeneratorProperties = new EventGeneratorProperties(properties);
-            EventLoggerWithName myLogger = new EventLoggerWithName("defaultFactory", EventGeneratorDefault.class.getName(), logger);
-            eventGenerator = new EventGeneratorFactoryDefault().create(context, eventGeneratorProperties, myLogger);
+            return removeEmptyLines(String.join("\n", topLevelScheduleScript, subScheduleScripts));
         }
 
-        return eventGenerator.generate();
     }
 
-    /**
-     * Provide schedule event as "duration|eventname(description)|json-settings".
-     * The duration is in ISO-8601 format period format, e.g. 3 minutes 15 seconds
-     * is PT3M15S.
-     *
-     * One schedule event per line.
-     *
-     * Or provide an EventScheduleGenerator implementation as:
-     *
-     * <pre>
-     *      {@literal @}generator-class=nl.stokpop.event.MyEventGenerator
-     *      foo=bar
-     * </pre>
-     *
-     * @param customEventsText e.g. PT3M15S|heapdump(1st heapdump)|server=test-server-1
-     * @return this
-     */
-    public EventSchedulerBuilder setCustomEvents(String customEventsText) {
-        if (customEventsText != null) {
-            this.customEventsText = customEventsText;
-        }
-        return this;
+    private static String removeEmptyLines(String text) {
+        return Arrays.stream(text.split("\\n"))
+            .map(String::trim)
+            .filter(line -> !line.isEmpty())
+            .collect(Collectors.joining("\n"));
     }
 
-    private EventGeneratorFactory findAndCreateEventScheduleGenerator(EventLogger logger, String generatorFactoryClassname, ClassLoader classLoader) {
-        EventGeneratorFactoryProvider provider =
-                EventGeneratorFactoryProvider.createInstanceFromClasspath(logger, classLoader);
+    private static TestConfig determineTopLevelConfigAndInjectInEventConfigs(EventSchedulerConfig eventSchedulerConfig, EventLogger logger) {
 
-        EventGeneratorFactory generatorFactory = provider.find(generatorFactoryClassname);
+        final TestConfig topLevelConfig;
+        // find first event config with a test config to use as top level config
+        if (eventSchedulerConfig.getTestConfig() == null) {
+            logger.info("no top level TestConfig found, will look for TestConfig in EventConfigs");
 
-        if (generatorFactory == null) {
-            throw new EventSchedulerRuntimeException("unable to find EventScheduleGeneratorFactory implementation class: " + generatorFactoryClassname);
+            List<EventConfig> eventConfigsWithTestConfig = eventSchedulerConfig.getEventConfigs().stream()
+                .filter(eventConfig -> eventConfig.getTestConfig() != null)
+                .collect(Collectors.toList());
+
+            if (eventConfigsWithTestConfig.isEmpty()) {
+                throw new EventSchedulerRuntimeException("no EventConfig found with a TestConfig, add one TestConfig");
+            }
+
+            if (eventConfigsWithTestConfig.size() > 1) {
+                throw new EventSchedulerRuntimeException("multiple EventConfigs found with a TestConfig, only one TestConfig is allowed without using a top level TestConfig");
+            }
+
+            EventConfig eventConfig = eventConfigsWithTestConfig.get(0);
+            logger.info("using TestConfig of EventConfig '" + eventConfig.getName() + "' as top level TestConfig");
+
+            topLevelConfig = eventConfig.getTestConfig();
+            eventSchedulerConfig.setTestConfig(topLevelConfig);
         }
-        return generatorFactory;
-    }
+        else {
+            topLevelConfig = eventSchedulerConfig.getTestConfig();
+            // if there is a top level test config, do not allow test config in event configs
+            List<EventConfig> eventConfigsWithTestConfig = eventSchedulerConfig.getEventConfigs().stream()
+                .filter(eventConfig -> eventConfig.getTestConfig() != null)
+                .collect(Collectors.toList());
 
-    public EventSchedulerBuilder addEvent(String eventName, Map<String, String> properties) {
-        addEvent(eventName, new EventProperties(properties));
-        return this;
-    }
-
-    public EventSchedulerBuilder addEvent(String eventName, Properties properties) {
-        addEvent(eventName, new EventProperties(properties));
-        return this;
-    }
-
-    public EventSchedulerBuilder addEvent(String eventName, EventProperties properties) {
-        EventInfo eventInfo = new EventInfo(eventName, properties);
-        boolean unique = eventInfos.add(eventInfo);
-        if (!unique) {
-            throw new EventSchedulerRuntimeException("Event name is not unique: " + eventInfo);
-        }
-        return this;
-    }
-
-    /**
-     * Optional. Default is probably good.
-     * @param eventFactoryProvider The event factory provider to use.
-     */
-    EventSchedulerBuilder setEventFactoryProvider(EventFactoryProvider eventFactoryProvider) {
-        this.eventFactoryProvider = eventFactoryProvider;
-        return this;
-    }
-
-    /**
-     * Optional. Default is probably good: the async event broadcaster.
-     * @param eventBroadcasterFactory the broadcaster implementation to use
-     */
-    EventSchedulerBuilder setEventBroadcasterFactory(EventBroadcasterFactory eventBroadcasterFactory) {
-        this.eventBroadcasterFactory = eventBroadcasterFactory;
-        return this;
-    }
-
-    /**
-     * Event name should be unique: it is used in logging and as lookup key.
-     *
-     * An event info is considered equal when eventName is the same.
-     */
-    @Immutable
-    private static final class EventInfo {
-        private String eventName;
-        private EventProperties eventProperties;
-
-        public EventInfo(String eventName, EventProperties eventProperties) {
-            this.eventName = eventName;
-            this.eventProperties = eventProperties;
+            if (eventConfigsWithTestConfig.size() > 0) {
+                String eventConfigs = eventConfigsWithTestConfig.stream()
+                    .map(EventConfig::getName)
+                    .collect(Collectors.joining(","));
+                throw new EventSchedulerRuntimeException("when a top level TestConfig is used, do not use TestConfig in EventConfigs: " + eventConfigs);
+            }
         }
 
-        public String getEventName() {
-            return eventName;
-        }
+        // inject top level config in all event configs
+        eventSchedulerConfig.getEventConfigs()
+            .forEach(eventConfig -> eventConfig.setTestConfig(topLevelConfig));
 
-        public EventProperties getEventProperties() {
-            return eventProperties;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-            EventInfo eventInfo = (EventInfo) o;
-            return Objects.equals(eventName, eventInfo.eventName);
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(eventName);
-        }
-
-        @Override
-        public String toString() {
-            return "EventInfo{" +
-                    "eventName='" + eventName + '\'' +
-                    ", eventProperties=" + eventProperties +
-                    '}';
-        }
+        return topLevelConfig;
     }
 }
