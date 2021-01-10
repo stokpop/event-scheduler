@@ -26,7 +26,6 @@ import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
@@ -63,7 +62,6 @@ public class EventSchedulerFromOutsidePackageTest
             .rampupTimeInSeconds(10)
             .constantLoadTimeInSeconds(300)
             .annotations("annotation")
-            .variables(Collections.emptyMap())
             .tags(Arrays.asList("tag1","tag2"))
             .build();
 
@@ -78,7 +76,7 @@ public class EventSchedulerFromOutsidePackageTest
         EventSchedulerConfig eventSchedulerConfig = EventSchedulerConfig.builder()
             .schedulerEnabled(true)
             .debugEnabled(false)
-            .continueOnAssertionFailure(false)
+            .continueOnEventCheckFailure(false)
             .failOnError(true)
             .keepAliveIntervalInSeconds(120)
             .testConfig(testConfig)

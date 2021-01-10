@@ -170,7 +170,7 @@ For example, using the `test-events-hello-world` event-scheduler plugin (yes, a 
             <debugEnabled>false</debugEnabled>
             <schedulerEnabled>true</schedulerEnabled>
             <failOnError>true</failOnError>
-            <continueOnAssertionFailure>true</continueOnAssertionFailure>
+            <continueOnEventCheckFailure>true</continueOnEventCheckFailure>
             <eventConfigs>
                 <eventConfig implementation="nl.stokpop.helloworld.event.StokpopEventConfig">
                     <name>StokpopHelloEvent1</name>

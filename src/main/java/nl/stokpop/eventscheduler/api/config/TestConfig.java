@@ -20,8 +20,10 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
-import java.util.Map;
+import java.util.stream.Collectors;
 
 @Data
 @Builder
@@ -40,14 +42,31 @@ public class TestConfig {
     private String dashboardName = "ANONYMOUS_DASHBOARD";
     @Builder.Default
     private String testRunId = "ANONYMOUS_TEST_ID";
-    private String buildResultsUrl;
+    @Builder.Default
+    private String buildResultsUrl = null;
     @Builder.Default
     private String version = "1.0.0-SNAPSHOT";
-    private String annotations;
-    private Map<String,String> variables;
-    private List<String> tags;
+    @Builder.Default
+    private String annotations = "";
+    @Builder.Default
+    private List<String> tags = Collections.emptyList();
     @Builder.Default
     private Integer rampupTimeInSeconds = 30;
     @Builder.Default
     private Integer constantLoadTimeInSeconds = 570;
+
+    public void setTags(String commaSeparatedTags) {
+        if (commaSeparatedTags == null) {
+            this.tags = Collections.emptyList();
+        }
+        else if (commaSeparatedTags.contains(",")) {
+            this.tags = Arrays.stream(commaSeparatedTags.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .collect(Collectors.toList());
+        }
+        else {
+            tags = Collections.singletonList(commaSeparatedTags);
+        }
+    }
 }

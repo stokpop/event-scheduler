@@ -20,6 +20,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.Collections;
 import java.util.List;
 
 @Data
@@ -34,10 +35,13 @@ public class EventSchedulerConfig {
     @Builder.Default
     private boolean failOnError = true;
     @Builder.Default
-    private boolean continueOnAssertionFailure = true;
+    private boolean continueOnEventCheckFailure = true;
     @Builder.Default
     private Integer keepAliveIntervalInSeconds = 30;
-    private String scheduleScript;
-    private TestConfig testConfig;
-    private List<EventConfig> eventConfigs;
+    @Builder.Default
+    private String scheduleScript = "";
+    @Builder.Default
+    private List<EventConfig> eventConfigs = Collections.emptyList();
+    @Builder.Default
+    private TestConfig testConfig = null;
 }

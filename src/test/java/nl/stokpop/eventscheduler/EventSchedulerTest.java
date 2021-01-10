@@ -26,7 +26,6 @@ import org.mockito.Mockito;
 
 import java.time.Duration;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -48,7 +47,8 @@ public class EventSchedulerTest
         EventFactoryProvider provider = Mockito.mock(EventFactoryProvider.class);
         // to simulate event failures
         Event event = Mockito.mock(Event.class);
-        EventFactory<?> eventFactory = Mockito.mock(EventFactory.class);
+        @SuppressWarnings("unchecked")
+        EventFactory<EventConfig> eventFactory = Mockito.mock(EventFactory.class);
 
         Mockito.when(eventFactory.create(any(), any())).thenReturn(event);
         Mockito.when(provider.factoryByClassName(any())).thenReturn(Optional.of(eventFactory));
@@ -78,7 +78,6 @@ public class EventSchedulerTest
             .rampupTimeInSeconds(10)
             .constantLoadTimeInSeconds(300)
             .annotations("annotation")
-            .variables(Collections.emptyMap())
             .tags(Arrays.asList("tag1","tag2"))
             .build();
 

@@ -15,6 +15,9 @@
  */
 package nl.stokpop.eventscheduler.api;
 
+import java.util.Collection;
+import java.util.Collections;
+
 /**
  * This interface can be implemented in other jars and be put on the classpath.
  *
@@ -67,5 +70,12 @@ public interface Event {
      * @param scheduleEvent the custom event, use to execute specific behaviour in the event handler
      */
     void customEvent(CustomEvent scheduleEvent);
+
+    /**
+     * @return collection of strings for all allowed custom events
+     */
+    default Collection<String> allowedCustomEvents() {
+        return Collections.emptyList();
+    }
 
 }

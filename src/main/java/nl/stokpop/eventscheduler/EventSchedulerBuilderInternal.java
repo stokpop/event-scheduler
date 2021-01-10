@@ -153,11 +153,13 @@ class EventSchedulerBuilderInternal {
             schedulerExceptionHandler);
     }
 
+    @SuppressWarnings("unchecked")
     private Event createEvent(EventFactoryProvider provider, EventConfig eventConfig) {
         String factoryClassName = eventConfig.getEventFactory();
         String eventName = eventConfig.getName();
         EventLogger eventLogger = new EventLoggerWithName(eventName, removeFactoryPostfix(factoryClassName), logger);
 
+        // create has raw type usage, so we have @SuppressWarnings("unchecked")
         return provider.factoryByClassName(factoryClassName)
                 .orElseThrow(() -> new RuntimeException(factoryClassName + " not found on classpath"))
                 .create(eventConfig, eventLogger);

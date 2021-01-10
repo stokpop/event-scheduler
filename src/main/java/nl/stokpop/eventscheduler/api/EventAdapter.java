@@ -28,12 +28,12 @@ import java.util.TreeSet;
  *
  * Always provide a proper name for an Event for traceability.
  */
-public abstract class EventAdapter implements Event {
+public abstract class EventAdapter<T extends EventConfig> implements Event {
 
-    protected final EventConfig eventConfig;
+    protected final T eventConfig;
     protected final EventLogger logger;
 
-    public EventAdapter(EventConfig eventConfig, EventLogger logger) {
+    public EventAdapter(T eventConfig, EventLogger logger) {
         this.eventConfig = eventConfig;
         this.logger = logger;
     }

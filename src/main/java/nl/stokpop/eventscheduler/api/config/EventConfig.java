@@ -34,11 +34,14 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class EventConfig {
-    private String name;
+    @Builder.Default
+    private String name = "event.name.not.Set";
     @Builder.Default
     private String eventFactory = "classname.not.Set";
     @Builder.Default
     private boolean enabled = true;
-    private String scheduleScript;
-    private TestConfig testConfig;
+    @Builder.Default
+    private String scheduleScript = null;
+    @Builder.Default
+    private TestConfig testConfig = null;
 }

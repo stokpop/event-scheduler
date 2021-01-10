@@ -21,7 +21,7 @@ import nl.stokpop.eventscheduler.api.EventCheck;
 import nl.stokpop.eventscheduler.api.EventLogger;
 import nl.stokpop.eventscheduler.api.config.EventConfig;
 
-public class EventDefault extends EventAdapter {
+public class EventDefault extends EventAdapter<EventConfig> {
 
     EventDefault(EventConfig eventConfig, EventLogger logger) {
         super(eventConfig, logger);

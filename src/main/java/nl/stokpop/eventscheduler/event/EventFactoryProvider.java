@@ -22,10 +22,10 @@ import java.util.stream.Collectors;
 
 public class EventFactoryProvider {
 
-    private final Map<String, EventFactory> eventFactories;
+    private final Map<String, EventFactory<?>> eventFactories;
 
-    private EventFactoryProvider(List<EventFactory> eventFactories) {
-        Map<String, EventFactory> map = eventFactories.stream()
+    private EventFactoryProvider(List<EventFactory<?>> eventFactories) {
+        Map<String, EventFactory<?>> map = eventFactories.stream()
                 .collect(Collectors.toMap(f -> f.getClass().getName(), f -> f));
         this.eventFactories = Collections.unmodifiableMap(map);
     }
@@ -39,8 +39,8 @@ public class EventFactoryProvider {
                 ? ServiceLoader.load(EventFactory.class)
                 : ServiceLoader.load(EventFactory.class, classLoader);
         // java 9+: List<EventFactory> eventFactories = eventFactoryLoader.stream().map(ServiceLoader.Provider::get).collect(Collectors.toList());
-        List<EventFactory> eventFactories = new ArrayList<>();
-        for (EventFactory eventFactory : eventFactoryLoader) {
+        List<EventFactory<?>> eventFactories = new ArrayList<>();
+        for (EventFactory<?> eventFactory : eventFactoryLoader) {
             eventFactories.add(eventFactory);
         }
         return new EventFactoryProvider(eventFactories);
