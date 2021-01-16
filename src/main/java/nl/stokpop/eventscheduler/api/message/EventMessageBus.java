@@ -13,14 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nl.stokpop.eventscheduler.api;
+package nl.stokpop.eventscheduler.api.message;
 
-import nl.stokpop.eventscheduler.api.config.EventConfig;
-import nl.stokpop.eventscheduler.api.message.EventMessageBus;
-
-/**
- * Create an EventGenerator based on the given event config.
- */
-public interface EventFactory<T extends EventConfig> {
-    Event create(T eventConfig, EventMessageBus eventMessageBus, EventLogger logger);
+public interface EventMessageBus {
+    void send(EventMessage message);
+    void addReceiver(EventMessageReceiver eventMessageReceiver);
 }

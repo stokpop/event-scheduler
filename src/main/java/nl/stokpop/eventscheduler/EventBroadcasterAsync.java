@@ -88,6 +88,35 @@ public class EventBroadcasterAsync implements EventBroadcaster {
         }
     }
 
+    @Override
+    public void broadcastStartTest() {
+        logger.info("broadcast start test event");
+
+        Stream<CompletableFuture<Void>> cfs = this.events.stream()
+            .map(e -> CompletableFuture.runAsync(e::startTest, executor)
+                .exceptionally(printError(e)));
+
+        CompletableFuture<Void> allStartTests = CompletableFuture.allOf(cfs.toArray(CompletableFuture[]::new))
+            .exceptionally(t -> {
+                logger.warn("There was an exception calling a before test: " + t.getMessage());
+                return null;
+            });
+
+        // block until all 'start tests' tasks are finished, only then proceed to run test
+        try {
+            Void aVoid = allStartTests.get(ALL_CALLS_TIME_OUT_SECONDS, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            logger.warn("got interrupt waiting for all 'after test' calls to finish, " +
+                "not all call may have been finished");
+        } catch (ExecutionException e) {
+            throw new EventSchedulerRuntimeException(
+                "waiting for all 'after test' calls failed", e);
+        } catch (TimeoutException e) {
+            logger.warn("waited for " + ALL_CALLS_TIME_OUT_SECONDS + " seconds, got timeout waiting, " +
+                "'after test' tasks might still be running?");
+        }
+    }
+
     /**
      * The after test calls of all events will run in parallel, but this method will wait for
      * all events to finish before returning.

@@ -20,16 +20,22 @@ import nl.stokpop.eventscheduler.api.EventAdapter;
 import nl.stokpop.eventscheduler.api.EventCheck;
 import nl.stokpop.eventscheduler.api.EventLogger;
 import nl.stokpop.eventscheduler.api.config.EventConfig;
+import nl.stokpop.eventscheduler.api.message.EventMessageBus;
 
 public class EventDefault extends EventAdapter<EventConfig> {
 
-    EventDefault(EventConfig eventConfig, EventLogger logger) {
-        super(eventConfig, logger);
+    EventDefault(EventConfig config, EventMessageBus messageBus, EventLogger logger) {
+        super(config, messageBus, logger);
     }
 
     @Override
     public void beforeTest() {
         logger.info("Before test: " + eventConfig.getTestConfig().getTestRunId());
+    }
+
+    @Override
+    public void startTest() {
+        logger.info("Start test: " + eventConfig.getTestConfig().getTestRunId());
     }
 
     @Override

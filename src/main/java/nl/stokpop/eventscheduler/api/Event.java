@@ -43,6 +43,11 @@ public interface Event {
     void beforeTest();
 
     /**
+     * Called when test run actually starts.
+     */
+    void startTest();
+
+    /**
      * Called after the test run is done. Use for instance to start creating a report of some sort or
      * remove the test environment.
      */

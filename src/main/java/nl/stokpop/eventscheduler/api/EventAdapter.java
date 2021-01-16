@@ -16,6 +16,7 @@
 package nl.stokpop.eventscheduler.api;
 
 import nl.stokpop.eventscheduler.api.config.EventConfig;
+import nl.stokpop.eventscheduler.api.message.EventMessageBus;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -32,15 +33,27 @@ public abstract class EventAdapter<T extends EventConfig> implements Event {
 
     protected final T eventConfig;
     protected final EventLogger logger;
+    protected final EventMessageBus eventMessageBus;
 
-    public EventAdapter(T eventConfig, EventLogger logger) {
+    public EventAdapter(T eventConfig, EventMessageBus eventMessageBus, EventLogger logger) {
         this.eventConfig = eventConfig;
         this.logger = logger;
+        this.eventMessageBus = eventMessageBus;
+    }
+
+    @Deprecated
+    public EventAdapter(T eventConfig, EventLogger logger) {
+        this(eventConfig, null, logger);
     }
 
     @Override
     public void beforeTest() {
         logger.debug(String.format("[%s] [%s] beforeTest (not implemented)", eventConfig.getName(), this.getClass().getName()));
+    }
+
+    @Override
+    public void startTest() {
+        logger.debug(String.format("[%s] [%s] startTest (not implemented)", eventConfig.getName(), this.getClass().getName()));
     }
 
     @Override

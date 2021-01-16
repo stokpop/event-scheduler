@@ -18,6 +18,8 @@ package nl.stokpop.eventscheduler;
 import nl.stokpop.eventscheduler.api.*;
 import nl.stokpop.eventscheduler.api.config.EventConfig;
 import nl.stokpop.eventscheduler.api.config.TestConfig;
+import nl.stokpop.eventscheduler.api.message.EventMessage;
+import nl.stokpop.eventscheduler.api.message.EventMessageBus;
 import nl.stokpop.eventscheduler.event.EventFactoryProvider;
 import nl.stokpop.eventscheduler.exception.EventCheckFailureException;
 import nl.stokpop.eventscheduler.log.EventLoggerStdOut;
@@ -50,7 +52,7 @@ public class EventSchedulerTest
         @SuppressWarnings("unchecked")
         EventFactory<EventConfig> eventFactory = Mockito.mock(EventFactory.class);
 
-        Mockito.when(eventFactory.create(any(), any())).thenReturn(event);
+        Mockito.when(eventFactory.create(any(), any(), any())).thenReturn(event);
         Mockito.when(provider.factoryByClassName(any())).thenReturn(Optional.of(eventFactory));
         EventCheck eventOne = new EventCheck("eventOne", "nl.stokpop.MockEvent", EventStatus.FAILURE, "This event failed!");
         EventCheck eventTwo = new EventCheck("eventTwo", "nl.stokpop.MockEvent", EventStatus.SUCCESS, "This event was ok!");
@@ -113,6 +115,7 @@ public class EventSchedulerTest
 
         // note these are called via the lambda catch exception handler via the default broadcaster
         Mockito.verify(event, times(3)).beforeTest();
+        Mockito.verify(event, times(3)).startTest();
         Mockito.verify(event, times(3)).afterTest();
         // this seems a timing issue if they are called or not, they are called in ide test, not in gradle test all
         Mockito.verify(event, atMost(3)).keepAlive();
@@ -121,6 +124,128 @@ public class EventSchedulerTest
         verifyNoMoreInteractions(ignoreStubs(event));
         verifyNoMoreInteractions(ignoreStubs(eventFactory));
 
+    }
+
+    static class EventWithMessageBus extends EventAdapter<EventConfig> {
+
+        public AtomicInteger startTestCounter = new AtomicInteger(0);
+
+        public EventWithMessageBus(EventConfig eventConfig, EventLogger logger, EventMessageBus eventMessageBus) {
+            super(eventConfig, eventMessageBus, logger);
+            eventMessageBus.addReceiver(message -> System.out.println(eventConfig.getName() + " received " + message));
+        }
+
+        @Override
+        public void beforeTest() {
+            super.beforeTest();
+            EventMessage message = EventMessage.builder()
+                .pluginName(EventWithMessageBus.class.getSimpleName() + "-" + eventConfig.getName())
+                .message("Go!")
+                .build();
+            eventMessageBus.send(message);
+        }
+
+        @Override
+        public void startTest() {
+            super.startTest();
+            startTestCounter.incrementAndGet();
+        }
+    }
+
+    @Test
+    public void createEventSchedulerWithMessageBus() {
+
+        EventLogger testLogger = EventLoggerStdOut.INSTANCE_DEBUG;
+
+        EventFactoryProvider provider = Mockito.mock(EventFactoryProvider.class);
+
+        @SuppressWarnings("unchecked")
+        EventFactory<EventConfig> eventFactory = Mockito.mock(EventFactory.class);
+
+        TestConfig testConfig = TestConfig.builder().build();
+
+        EventConfig eventConfig1 = EventConfig.builder()
+            .name("myEvent1").testConfig(testConfig).build();
+        EventConfig eventConfig2 = EventConfig.builder()
+            .name("myEvent2").testConfig(testConfig).build();
+
+        EventMessageBusImpl eventMessageBus = new EventMessageBusImpl();
+        EventWithMessageBus event1 = new EventWithMessageBus(eventConfig1, testLogger, eventMessageBus);
+        EventWithMessageBus event2 = new EventWithMessageBus(eventConfig2, testLogger, eventMessageBus);
+
+        Mockito.when(eventFactory.create(any(), any(), any())).thenReturn(event1).thenReturn(event2);
+        Mockito.when(provider.factoryByClassName(any())).thenReturn(Optional.of(eventFactory));
+
+        EventSchedulerSettings settings = new EventSchedulerSettingsBuilder()
+                .setKeepAliveInterval(Duration.ofSeconds(1))
+                .build();
+
+        EventScheduler scheduler = new EventSchedulerBuilderInternal()
+                .setEventSchedulerSettings(settings)
+                .setName(testConfig.getTestRunId())
+                .setAssertResultsEnabled(true)
+                .addEvent(eventConfig1)
+                .addEvent(eventConfig2)
+
+                .setLogger(testLogger)
+                .setEventFactoryProvider(provider)
+                .build();
+
+        scheduler.startSession();
+
+        assertEquals(1, event1.startTestCounter.get());
+        assertEquals(1, event2.startTestCounter.get());
+    }
+
+    @Test
+    public void createEventSchedulerWithMessageBusAndReadyToStartParticipants() {
+
+        EventLogger testLogger = EventLoggerStdOut.INSTANCE_DEBUG;
+
+        EventFactoryProvider provider = Mockito.mock(EventFactoryProvider.class);
+
+        @SuppressWarnings("unchecked")
+        EventFactory<EventConfig> eventFactory = Mockito.mock(EventFactory.class);
+
+        TestConfig testConfig = TestConfig.builder().build();
+
+        EventConfig eventConfig1 = EventConfig.builder()
+            .name("myEvent1")
+            .isReadyForStartParticipant(true)
+            .testConfig(testConfig)
+            .build();
+        EventConfig eventConfig2 = EventConfig.builder()
+            .name("myEvent2")
+            .isReadyForStartParticipant(true)
+            .testConfig(testConfig)
+            .build();
+
+        EventMessageBusImpl eventMessageBus = new EventMessageBusImpl();
+        EventWithMessageBus event1 = new EventWithMessageBus(eventConfig1, testLogger, eventMessageBus);
+        EventWithMessageBus event2 = new EventWithMessageBus(eventConfig2, testLogger, eventMessageBus);
+
+        Mockito.when(eventFactory.create(any(), any(), any())).thenReturn(event1).thenReturn(event2);
+        Mockito.when(provider.factoryByClassName(any())).thenReturn(Optional.of(eventFactory));
+
+        EventSchedulerSettings settings = new EventSchedulerSettingsBuilder()
+                .setKeepAliveInterval(Duration.ofSeconds(1))
+                .build();
+
+        EventScheduler scheduler = new EventSchedulerBuilderInternal()
+                .setEventSchedulerSettings(settings)
+                .setName(testConfig.getTestRunId())
+                .setAssertResultsEnabled(true)
+                .addEvent(eventConfig1)
+                .addEvent(eventConfig2)
+                .setEventMessageBus(eventMessageBus)
+                .setLogger(testLogger)
+                .setEventFactoryProvider(provider)
+                .build();
+
+        scheduler.startSession();
+
+        assertEquals(1, event1.startTestCounter.get());
+        assertEquals(1, event2.startTestCounter.get());
     }
 
     /**

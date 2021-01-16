@@ -16,10 +16,15 @@
 package nl.stokpop.eventscheduler;
 
 import nl.stokpop.eventscheduler.api.*;
+import nl.stokpop.eventscheduler.api.config.EventConfig;
+import nl.stokpop.eventscheduler.api.message.EventMessage;
+import nl.stokpop.eventscheduler.api.message.EventMessageBus;
 import nl.stokpop.eventscheduler.exception.EventCheckFailureException;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 public final class EventScheduler {
@@ -34,18 +39,30 @@ public final class EventScheduler {
 
     private final EventBroadcaster broadcaster;
 
-    private final List<CustomEvent> scheduleEvents;
+    private final Collection<CustomEvent> scheduleEvents;
+
+    private final Collection<EventConfig> eventConfigs;
+
+    private final EventMessageBus eventMessageBus;
+
     private volatile SchedulerExceptionHandler schedulerExceptionHandler;
 
     private final EventSchedulerEngine eventSchedulerEngine;
 
     private final AtomicBoolean isSessionActive = new AtomicBoolean(false);
 
+    private final AtomicInteger goMessageCount = new AtomicInteger(0);
+
+    private final StartTest startTest;
+    private final int waitForGoMessagesCount;
+
     EventScheduler(String name,
                    EventSchedulerSettings settings,
                    boolean checkResultsEnabled,
                    EventBroadcaster broadcaster,
-                   List<CustomEvent> scheduleEvents,
+                   Collection<CustomEvent> scheduleEvents,
+                   Collection<EventConfig> eventConfigs,
+                   EventMessageBus messageBus,
                    EventLogger logger,
                    EventSchedulerEngine eventSchedulerEngine,
                    SchedulerExceptionHandler schedulerExceptionHandler) {
@@ -54,14 +71,45 @@ public final class EventScheduler {
         this.checkResultsEnabled = checkResultsEnabled;
         this.broadcaster = broadcaster;
         this.scheduleEvents = scheduleEvents;
+        this.eventConfigs = eventConfigs;
+        this.eventMessageBus = messageBus;
         this.logger = logger;
         this.eventSchedulerEngine = eventSchedulerEngine;
         this.schedulerExceptionHandler = schedulerExceptionHandler;
+
+        this.waitForGoMessagesCount = (int) eventConfigs.stream()
+            .filter(EventConfig::isReadyForStartParticipant)
+            .peek(e -> logger.info("Found 'ReadyForStart' participant: " + e.getName()))
+            .count();
+
+        this.startTest = () -> {
+            broadcaster.broadcastStartTest();
+            eventSchedulerEngine.startKeepAliveThread(name, settings, broadcaster, schedulerExceptionHandler);
+            eventSchedulerEngine.startCustomEventScheduler(scheduleEvents, broadcaster);
+        };
+
+        // add startTest to this receiver... if needed...
+        if (waitForGoMessagesCount != 0) {
+            logger.info("Wait for Go! messages is active, need " + waitForGoMessagesCount + " Go! messages to start!");
+            this.eventMessageBus.addReceiver(m -> checkMessageForGo(m, startTest, waitForGoMessagesCount));
+        }
+    }
+
+    private void checkMessageForGo(EventMessage m, StartTest startTest, int totalGoMessages) {
+        if ("go!".equalsIgnoreCase(m.getMessage())) {
+            int count = goMessageCount.incrementAndGet();
+            logger.info("Got 'Go! message' from " + m.getPluginName() + " now counted " + count + " 'Go! messages' of " + totalGoMessages + " needed.");
+            if (count == totalGoMessages) {
+                // Go!
+                startTest.start();
+            }
+        }
     }
 
     public void addKillSwitch(SchedulerExceptionHandler schedulerExceptionHandler) {
         this.schedulerExceptionHandler = schedulerExceptionHandler;
     }
+
     /**
      * Start a test session.
      */
@@ -75,8 +123,10 @@ public final class EventScheduler {
 
             broadcaster.broadcastBeforeTest();
 
-            eventSchedulerEngine.startKeepAliveThread(name, settings, broadcaster, schedulerExceptionHandler);
-            eventSchedulerEngine.startCustomEventScheduler(scheduleEvents, broadcaster);
+            if (waitForGoMessagesCount == 0) {
+                startTest.start();
+            }
+            // otherwise, wait for the Go! messages callbacks
         }
     }
 
@@ -159,5 +209,9 @@ public final class EventScheduler {
     @Override
     public String toString() {
         return "EventScheduler [testRunId:" + name + "]";
+    }
+
+    private interface StartTest {
+        void start();
     }
 }

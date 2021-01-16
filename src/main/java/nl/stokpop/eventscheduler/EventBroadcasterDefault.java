@@ -48,6 +48,12 @@ public class EventBroadcasterDefault implements EventBroadcaster {
     }
 
     @Override
+    public void broadcastStartTest() {
+        logger.info("broadcast start test event");
+        events.forEach(catchExceptionWrapper(Event::startTest));
+    }
+
+    @Override
     public void broadcastAfterTest() {
         logger.info("broadcast after test event");
         events.forEach(catchExceptionWrapper(Event::afterTest));

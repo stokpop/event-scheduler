@@ -44,4 +44,6 @@ public class EventConfig {
     private String scheduleScript = null;
     @Builder.Default
     private TestConfig testConfig = null;
+    @Builder.Default
+    private boolean isReadyForStartParticipant = false;
 }

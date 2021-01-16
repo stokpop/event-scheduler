@@ -27,6 +27,8 @@ public interface EventBroadcaster {
 
     void broadcastBeforeTest();
 
+    void broadcastStartTest();
+
     void broadcastAfterTest();
 
     void broadcastKeepAlive();

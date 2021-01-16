@@ -13,14 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nl.stokpop.eventscheduler.api;
+package nl.stokpop.eventscheduler;
 
-import nl.stokpop.eventscheduler.api.config.EventConfig;
+import nl.stokpop.eventscheduler.api.message.EventMessage;
 import nl.stokpop.eventscheduler.api.message.EventMessageBus;
+import nl.stokpop.eventscheduler.api.message.EventMessageReceiver;
 
-/**
- * Create an EventGenerator based on the given event config.
- */
-public interface EventFactory<T extends EventConfig> {
-    Event create(T eventConfig, EventMessageBus eventMessageBus, EventLogger logger);
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+class EventMessageBusImpl implements EventMessageBus {
+
+    private final List<EventMessageReceiver> receivers = Collections.synchronizedList(new ArrayList<>());
+
+    @Override
+    public void send(EventMessage message) {
+        receivers.forEach(r -> r.receive(message));
+    }
+
+    @Override
+    public void addReceiver(EventMessageReceiver eventMessageReceiver) {
+        receivers.add(eventMessageReceiver);
+    }
 }

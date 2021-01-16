@@ -91,13 +91,13 @@ public class EventBroadcasterTest {
         assertEquals("one errors expected in logger", 1, countErrorsEventLogger.errorCount());
     }
 
-    private static class MyTestEventThatCanFail extends EventAdapter {
+    private static class MyTestEventThatCanFail extends EventAdapter<EventConfig> {
 
         private final static EventConfig eventConfig = configWithName("MyTestEventThatCanFail");
 
-        private AtomicInteger counter;
-        private int expectValue;
-        private int newValue;
+        private final AtomicInteger counter;
+        private final int expectValue;
+        private final int newValue;
 
 
         MyTestEventThatCanFail(AtomicInteger counter, int expectValue, int newValue, EventLogger eventLogger) {
@@ -246,7 +246,7 @@ public class EventBroadcasterTest {
         return events;
     }
 
-    private static class MySleepyEvent extends EventAdapter {
+    private static class MySleepyEvent extends EventAdapter<EventConfig> {
 
         public MySleepyEvent(EventConfig eventConfig, EventLogger eventLogger) {
             super(eventConfig, eventLogger);
@@ -268,7 +268,7 @@ public class EventBroadcasterTest {
         }
     }
 
-    private static class MyKillSwitchEvent extends EventAdapter {
+    private static class MyKillSwitchEvent extends EventAdapter<EventConfig> {
 
         public MyKillSwitchEvent(EventConfig eventConfig) {
             super(eventConfig, EventLoggerStdOut.INSTANCE_DEBUG);
@@ -287,7 +287,7 @@ public class EventBroadcasterTest {
         }
     }
 
-    private static class MyErrorEvent extends EventAdapter {
+    private static class MyErrorEvent extends EventAdapter<EventConfig> {
 
         public MyErrorEvent(EventConfig eventConfig, EventLogger eventLogger) {
             super(eventConfig, eventLogger);

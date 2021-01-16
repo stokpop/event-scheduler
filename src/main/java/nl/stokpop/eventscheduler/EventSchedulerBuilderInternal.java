@@ -18,6 +18,7 @@ package nl.stokpop.eventscheduler;
 import net.jcip.annotations.NotThreadSafe;
 import nl.stokpop.eventscheduler.api.*;
 import nl.stokpop.eventscheduler.api.config.EventConfig;
+import nl.stokpop.eventscheduler.api.message.EventMessageBus;
 import nl.stokpop.eventscheduler.event.EventFactoryProvider;
 import nl.stokpop.eventscheduler.exception.EventSchedulerRuntimeException;
 import nl.stokpop.eventscheduler.generator.EventGeneratorDefault;
@@ -58,8 +59,15 @@ class EventSchedulerBuilderInternal {
 
     private EventSchedulerEngine eventSchedulerEngine;
 
+    private EventMessageBus eventMessageBus;
+
     public EventSchedulerBuilderInternal setEventSchedulerEngine(EventSchedulerEngine executorEngine) {
         this.eventSchedulerEngine = executorEngine;
+        return this;
+    }
+
+    public EventSchedulerBuilderInternal setEventMessageBus(EventMessageBus eventMessageBus) {
+        this.eventMessageBus = eventMessageBus;
         return this;
     }
 
@@ -125,7 +133,7 @@ class EventSchedulerBuilderInternal {
 
         List<Event> events = eventConfigs.values().stream()
                 .filter(EventConfig::isEnabled)
-                .map(eventConfig -> createEvent(provider, eventConfig))
+                .map(eventConfig -> createEvent(provider, eventConfig, eventMessageBus))
                 .collect(Collectors.toList());
 
         EventBroadcasterFactory broadcasterFactory = (eventBroadcasterFactory == null)
@@ -138,9 +146,9 @@ class EventSchedulerBuilderInternal {
             ? new EventSchedulerEngine(logger)
             : eventSchedulerEngine;
 
-        // TODO: test config can exist at the top level config,
-        // but it can also live in one or more of the event configs
-        // -> if there is none at top level, use the one from the events
+        EventMessageBus eventMessageBus = (this.eventMessageBus == null)
+            ? new EventMessageBusImpl()
+            : this.eventMessageBus;
 
         return new EventScheduler(
             name,
@@ -148,13 +156,15 @@ class EventSchedulerBuilderInternal {
             assertResultsEnabled,
             broadcaster,
             customEvents,
+            eventConfigs.values(),
+            eventMessageBus,
             logger,
             eventSchedulerEngine,
             schedulerExceptionHandler);
     }
 
     @SuppressWarnings("unchecked")
-    private Event createEvent(EventFactoryProvider provider, EventConfig eventConfig) {
+    private Event createEvent(EventFactoryProvider provider, EventConfig eventConfig, EventMessageBus eventMessageBus) {
         String factoryClassName = eventConfig.getEventFactory();
         String eventName = eventConfig.getName();
         EventLogger eventLogger = new EventLoggerWithName(eventName, removeFactoryPostfix(factoryClassName), logger);
@@ -162,7 +172,7 @@ class EventSchedulerBuilderInternal {
         // create has raw type usage, so we have @SuppressWarnings("unchecked")
         return provider.factoryByClassName(factoryClassName)
                 .orElseThrow(() -> new RuntimeException(factoryClassName + " not found on classpath"))
-                .create(eventConfig, eventLogger);
+                .create(eventConfig, eventMessageBus, eventLogger);
     }
 
     private String removeFactoryPostfix(String factoryClassName) {

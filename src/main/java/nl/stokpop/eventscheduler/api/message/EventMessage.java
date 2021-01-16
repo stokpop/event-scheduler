@@ -13,14 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nl.stokpop.eventscheduler.api;
+package nl.stokpop.eventscheduler.api.message;
 
-import nl.stokpop.eventscheduler.api.config.EventConfig;
-import nl.stokpop.eventscheduler.api.message.EventMessageBus;
+import lombok.Builder;
+import lombok.Singular;
+import lombok.Value;
 
-/**
- * Create an EventGenerator based on the given event config.
- */
-public interface EventFactory<T extends EventConfig> {
-    Event create(T eventConfig, EventMessageBus eventMessageBus, EventLogger logger);
+import java.util.Map;
+
+@Value
+@Builder
+public class EventMessage {
+    @Builder.Default
+    long timestamp = System.currentTimeMillis();
+    String message;
+    String pluginName;
+    @Singular
+    Map<String, String> variables;
 }

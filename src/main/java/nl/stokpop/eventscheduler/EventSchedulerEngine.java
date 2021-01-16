@@ -19,6 +19,7 @@ import nl.stokpop.eventscheduler.api.*;
 import nl.stokpop.eventscheduler.exception.EventSchedulerRuntimeException;
 import nl.stokpop.eventscheduler.exception.handler.SchedulerHandlerException;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -92,7 +93,7 @@ class EventSchedulerEngine {
         executorCustomEvents = null;
     }
 
-    void startCustomEventScheduler(List<CustomEvent> scheduleEvents, EventBroadcaster broadcaster) {
+    void startCustomEventScheduler(Collection<CustomEvent> scheduleEvents, EventBroadcaster broadcaster) {
         nullChecks(broadcaster);
 
         if (!(scheduleEvents == null || scheduleEvents.isEmpty())) {
@@ -107,7 +108,7 @@ class EventSchedulerEngine {
         }
     }
 
-    public static String createEventScheduleMessage(List<CustomEvent> scheduleEvents) {
+    public static String createEventScheduleMessage(Collection<CustomEvent> scheduleEvents) {
         StringBuilder message = new StringBuilder();
         message.append("=== custom events schedule ===");
         scheduleEvents.forEach(event -> message
