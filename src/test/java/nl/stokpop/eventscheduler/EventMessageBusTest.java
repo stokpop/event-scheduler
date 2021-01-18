@@ -28,7 +28,7 @@ public class EventMessageBusTest {
     @Test
     public void sendMinimalCase() {
         EventMessage messageOne = EventMessage.builder().build();
-        EventMessageBus eventMessageBus = new EventMessageBusImpl();
+        EventMessageBus eventMessageBus = new EventMessageBusSimple();
         eventMessageBus.send(messageOne);
     }
 
@@ -37,7 +37,7 @@ public class EventMessageBusTest {
         EventMessage messageOne = EventMessage.builder().build();
         AtomicInteger called = new AtomicInteger(0);
 
-        EventMessageBus eventMessageBus = new EventMessageBusImpl();
+        EventMessageBus eventMessageBus = new EventMessageBusSimple();
         eventMessageBus.addReceiver(message -> { called.incrementAndGet(); assertEquals(messageOne, message); } );
         eventMessageBus.send(messageOne);
 

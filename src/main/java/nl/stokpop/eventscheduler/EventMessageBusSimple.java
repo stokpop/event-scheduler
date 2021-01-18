@@ -23,7 +23,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-class EventMessageBusImpl implements EventMessageBus {
+/**
+ * Very simple EventMessageBus implementation.
+ * Sends messages to all receivers known at send time.
+ * Also sends message to original sender if it is also receiving.
+ */
+public class EventMessageBusSimple implements EventMessageBus {
 
     private final List<EventMessageReceiver> receivers = Collections.synchronizedList(new ArrayList<>());
 

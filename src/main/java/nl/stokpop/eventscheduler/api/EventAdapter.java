@@ -15,7 +15,7 @@
  */
 package nl.stokpop.eventscheduler.api;
 
-import nl.stokpop.eventscheduler.api.config.EventConfig;
+import nl.stokpop.eventscheduler.api.config.EventContext;
 import nl.stokpop.eventscheduler.api.message.EventMessageBus;
 
 import java.util.Arrays;
@@ -29,46 +29,46 @@ import java.util.TreeSet;
  *
  * Always provide a proper name for an Event for traceability.
  */
-public abstract class EventAdapter<T extends EventConfig> implements Event {
+public abstract class EventAdapter<T extends EventContext> implements Event {
 
-    protected final T eventConfig;
+    protected final T eventContext;
     protected final EventLogger logger;
     protected final EventMessageBus eventMessageBus;
 
-    public EventAdapter(T eventConfig, EventMessageBus eventMessageBus, EventLogger logger) {
-        this.eventConfig = eventConfig;
+    public EventAdapter(T context, EventMessageBus messageBus, EventLogger logger) {
+        this.eventContext = context;
         this.logger = logger;
-        this.eventMessageBus = eventMessageBus;
+        this.eventMessageBus = messageBus;
     }
 
     @Deprecated
-    public EventAdapter(T eventConfig, EventLogger logger) {
-        this(eventConfig, null, logger);
+    public EventAdapter(T context, EventLogger logger) {
+        this(context, null, logger);
     }
 
     @Override
     public void beforeTest() {
-        logger.debug(String.format("[%s] [%s] beforeTest (not implemented)", eventConfig.getName(), this.getClass().getName()));
+        logger.debug(String.format("[%s] [%s] beforeTest (not implemented)", eventContext.getName(), this.getClass().getName()));
     }
 
     @Override
     public void startTest() {
-        logger.debug(String.format("[%s] [%s] startTest (not implemented)", eventConfig.getName(), this.getClass().getName()));
+        logger.debug(String.format("[%s] [%s] startTest (not implemented)", eventContext.getName(), this.getClass().getName()));
     }
 
     @Override
     public void afterTest() {
-        logger.debug(String.format("[%s] [%s] afterTest (not implemented)", eventConfig.getName(), this.getClass().getName()));
+        logger.debug(String.format("[%s] [%s] afterTest (not implemented)", eventContext.getName(), this.getClass().getName()));
     }
 
     @Override
     public void keepAlive() {
-        logger.debug(String.format("[%s] [%s] keepAlive (not implemented)", eventConfig.getName(), this.getClass().getName()));
+        logger.debug(String.format("[%s] [%s] keepAlive (not implemented)", eventContext.getName(), this.getClass().getName()));
     }
 
     @Override
     public void abortTest() {
-        logger.debug(String.format("[%s] [%s] abortTest (not implemented)", eventConfig.getName(), this.getClass().getName()));
+        logger.debug(String.format("[%s] [%s] abortTest (not implemented)", eventContext.getName(), this.getClass().getName()));
     }
 
     @Override
@@ -78,12 +78,12 @@ public abstract class EventAdapter<T extends EventConfig> implements Event {
 
     @Override
     public void customEvent(CustomEvent customEvent) {
-        logger.debug(String.format("[%s] [%s] [%s] customEvent (not implemented)", eventConfig.getName(), this.getClass().getName(), customEvent.getName()));
+        logger.debug(String.format("[%s] [%s] [%s] customEvent (not implemented)", eventContext.getName(), this.getClass().getName(), customEvent.getName()));
     }
 
     @Override
     public final String getName() {
-        return eventConfig.getName();
+        return eventContext.getName();
     }
 
     /**

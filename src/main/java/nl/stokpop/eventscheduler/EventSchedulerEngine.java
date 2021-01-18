@@ -15,10 +15,14 @@
  */
 package nl.stokpop.eventscheduler;
 
-import nl.stokpop.eventscheduler.api.*;
+import nl.stokpop.eventscheduler.api.CustomEvent;
+import nl.stokpop.eventscheduler.api.EventLogger;
+import nl.stokpop.eventscheduler.api.SchedulerExceptionHandler;
+import nl.stokpop.eventscheduler.api.SchedulerExceptionType;
 import nl.stokpop.eventscheduler.exception.EventSchedulerRuntimeException;
 import nl.stokpop.eventscheduler.exception.handler.SchedulerHandlerException;
 
+import java.time.Duration;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Executors;
@@ -41,19 +45,19 @@ class EventSchedulerEngine {
         this.logger = logger;
     }
 
-    void startKeepAliveThread(String name, EventSchedulerSettings settings, EventBroadcaster broadcaster, SchedulerExceptionHandler schedulerExceptionHandler) {
+    void startKeepAliveThread(String name, Duration keepAliveDuration, EventBroadcaster broadcaster, SchedulerExceptionHandler schedulerExceptionHandler) {
         nullChecks(name, broadcaster);
 
         if (executorKeepAlive != null) {
             throw new RuntimeException("cannot start keep alive thread multiple times!");
         }
 
-        logger.info(String.format("calling keep alive every %s", settings.getKeepAliveDuration()));
+        logger.info(String.format("calling keep alive every %s", keepAliveDuration));
 
         executorKeepAlive = createKeepAliveScheduler();
         
         KeepAliveRunner keepAliveRunner = new KeepAliveRunner(name, broadcaster, schedulerExceptionHandler);
-        executorKeepAlive.scheduleAtFixedRate(keepAliveRunner, 0, settings.getKeepAliveDuration().getSeconds(), TimeUnit.SECONDS);
+        executorKeepAlive.scheduleAtFixedRate(keepAliveRunner, 0, keepAliveDuration.getSeconds(), TimeUnit.SECONDS);
     }
 
     private void nullChecks(EventBroadcaster broadcaster) {

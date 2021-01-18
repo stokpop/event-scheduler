@@ -18,10 +18,10 @@ package nl.stokpop.eventscheduler.event;
 import nl.stokpop.eventscheduler.api.Event;
 import nl.stokpop.eventscheduler.api.EventFactory;
 import nl.stokpop.eventscheduler.api.EventLogger;
-import nl.stokpop.eventscheduler.api.config.EventConfig;
+import nl.stokpop.eventscheduler.api.config.EventContext;
 import nl.stokpop.eventscheduler.api.message.EventMessageBus;
 
-public class EventFactoryDefault implements EventFactory<EventConfig>{
+public class EventFactoryDefault implements EventFactory<EventContext>{
 
     private String name;
 
@@ -34,8 +34,8 @@ public class EventFactoryDefault implements EventFactory<EventConfig>{
     }
 
     @Override
-    public Event create(EventConfig config, EventMessageBus messageBus, EventLogger logger) {
-        return new EventDefault(config, messageBus, logger);
+    public Event create(EventContext context, EventMessageBus messageBus, EventLogger logger) {
+        return new EventDefault(context, messageBus, logger);
     }
 
     @Override

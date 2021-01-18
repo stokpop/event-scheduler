@@ -17,8 +17,8 @@ package nl.stokpop.eventscheduler.api.config;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * The EventConfig is used is given to each event call.
@@ -29,15 +29,16 @@ import lombok.NoArgsConstructor;
  * Another field is 'enabled', default is true.
  * If set to false, the event will not be active.
  */
-@Data
+@Setter
 @Builder
-@NoArgsConstructor
 @AllArgsConstructor
+@NoArgsConstructor
+//@NotThreadSafe
 public class EventConfig {
     @Builder.Default
-    private String name = "event.name.not.Set";
+    private String name = "anonymous-" + System.currentTimeMillis();
     @Builder.Default
-    private String eventFactory = "classname.not.Set";
+    private String eventFactory = "eventFactory.not.Set";
     @Builder.Default
     private boolean enabled = true;
     @Builder.Default
@@ -46,4 +47,19 @@ public class EventConfig {
     private TestConfig testConfig = null;
     @Builder.Default
     private boolean isReadyForStartParticipant = false;
+
+    public EventContext toContext(TestContext overrideTestContext) {
+        return EventContext.builder()
+            .name(name)
+            .eventFactory(eventFactory)
+            .enabled(enabled)
+            .scheduleScript(scheduleScript)
+            .testContext(overrideTestContext)
+            .isReadyForStartParticipant(isReadyForStartParticipant)
+            .build();
+    }
+
+    public EventContext toContext() {
+        return toContext(testConfig == null ? null : testConfig.toContext());
+    }
 }

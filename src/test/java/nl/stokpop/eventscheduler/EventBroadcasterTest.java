@@ -17,6 +17,7 @@ package nl.stokpop.eventscheduler;
 
 import nl.stokpop.eventscheduler.api.*;
 import nl.stokpop.eventscheduler.api.config.EventConfig;
+import nl.stokpop.eventscheduler.api.config.EventContext;
 import nl.stokpop.eventscheduler.exception.handler.AbortSchedulerException;
 import nl.stokpop.eventscheduler.exception.handler.KillSwitchException;
 import nl.stokpop.eventscheduler.log.CountErrorsEventLogger;
@@ -91,9 +92,9 @@ public class EventBroadcasterTest {
         assertEquals("one errors expected in logger", 1, countErrorsEventLogger.errorCount());
     }
 
-    private static class MyTestEventThatCanFail extends EventAdapter<EventConfig> {
+    private static class MyTestEventThatCanFail extends EventAdapter<EventContext> {
 
-        private final static EventConfig eventConfig = configWithName("MyTestEventThatCanFail");
+        private final static EventContext eventContext = configWithName("MyTestEventThatCanFail");
 
         private final AtomicInteger counter;
         private final int expectValue;
@@ -101,7 +102,7 @@ public class EventBroadcasterTest {
 
 
         MyTestEventThatCanFail(AtomicInteger counter, int expectValue, int newValue, EventLogger eventLogger) {
-            super(eventConfig, eventLogger);
+            super(eventContext, eventLogger);
             this.counter = counter;
             this.expectValue= expectValue;
             this.newValue = newValue;
@@ -220,8 +221,8 @@ public class EventBroadcasterTest {
         return events;
     }
 
-    private static EventConfig configWithName(String sleepy1) {
-        return EventConfig.builder().name(sleepy1).build();
+    private static EventContext configWithName(String sleepy1) {
+        return EventConfig.builder().name(sleepy1).build().toContext();
     }
 
     private List<Event> createKillSwitchTestEvents() {
@@ -246,10 +247,10 @@ public class EventBroadcasterTest {
         return events;
     }
 
-    private static class MySleepyEvent extends EventAdapter<EventConfig> {
+    private static class MySleepyEvent extends EventAdapter<EventContext> {
 
-        public MySleepyEvent(EventConfig eventConfig, EventLogger eventLogger) {
-            super(eventConfig, eventLogger);
+        public MySleepyEvent(EventContext context, EventLogger eventLogger) {
+            super(context, eventLogger);
         }
 
         @Override
@@ -264,19 +265,19 @@ public class EventBroadcasterTest {
             logger.info(System.currentTimeMillis() + " Sleep in check in thread: " + Thread.currentThread().getName());
             sleep(500);
             logger.error(System.currentTimeMillis() + " After sleep in check in thread: " + Thread.currentThread().getName());
-             return new EventCheck(eventConfig.getName(), getClass().getSimpleName(), EventStatus.SUCCESS, "All ok");
+             return new EventCheck(eventContext.getName(), getClass().getSimpleName(), EventStatus.SUCCESS, "All ok");
         }
     }
 
-    private static class MyKillSwitchEvent extends EventAdapter<EventConfig> {
+    private static class MyKillSwitchEvent extends EventAdapter<EventContext> {
 
-        public MyKillSwitchEvent(EventConfig eventConfig) {
-            super(eventConfig, EventLoggerStdOut.INSTANCE_DEBUG);
+        public MyKillSwitchEvent(EventContext eventContext) {
+            super(eventContext, EventLoggerStdOut.INSTANCE_DEBUG);
         }
 
         @Override
         public void keepAlive() {
-            String eventName = eventConfig.getName();
+            String eventName = eventContext.getName();
             logger.info("keep alive called for " + eventName);
             if (eventName.startsWith("killer")) {
                 throw new KillSwitchException("kill switch requested from " + eventName);
@@ -287,10 +288,10 @@ public class EventBroadcasterTest {
         }
     }
 
-    private static class MyErrorEvent extends EventAdapter<EventConfig> {
+    private static class MyErrorEvent extends EventAdapter<EventContext> {
 
-        public MyErrorEvent(EventConfig eventConfig, EventLogger eventLogger) {
-            super(eventConfig, eventLogger);
+        public MyErrorEvent(EventContext context, EventLogger eventLogger) {
+            super(context, eventLogger);
         }
 
         @Override

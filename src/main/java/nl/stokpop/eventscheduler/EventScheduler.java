@@ -16,7 +16,8 @@
 package nl.stokpop.eventscheduler;
 
 import nl.stokpop.eventscheduler.api.*;
-import nl.stokpop.eventscheduler.api.config.EventConfig;
+import nl.stokpop.eventscheduler.api.config.EventContext;
+import nl.stokpop.eventscheduler.api.config.EventSchedulerContext;
 import nl.stokpop.eventscheduler.api.message.EventMessage;
 import nl.stokpop.eventscheduler.api.message.EventMessageBus;
 import nl.stokpop.eventscheduler.exception.EventCheckFailureException;
@@ -33,15 +34,13 @@ public final class EventScheduler {
 
     private final String name;
 
-    private final EventSchedulerSettings settings;
-
     private final boolean checkResultsEnabled;
 
     private final EventBroadcaster broadcaster;
 
     private final Collection<CustomEvent> scheduleEvents;
 
-    private final Collection<EventConfig> eventConfigs;
+    private final EventSchedulerContext eventSchedulerContext;
 
     private final EventMessageBus eventMessageBus;
 
@@ -56,35 +55,31 @@ public final class EventScheduler {
     private final StartTest startTest;
     private final int waitForGoMessagesCount;
 
-    EventScheduler(String name,
-                   EventSchedulerSettings settings,
-                   boolean checkResultsEnabled,
-                   EventBroadcaster broadcaster,
+    EventScheduler(EventBroadcaster broadcaster,
                    Collection<CustomEvent> scheduleEvents,
-                   Collection<EventConfig> eventConfigs,
+                   EventSchedulerContext eventSchedulerContext,
                    EventMessageBus messageBus,
                    EventLogger logger,
                    EventSchedulerEngine eventSchedulerEngine,
                    SchedulerExceptionHandler schedulerExceptionHandler) {
-        this.name = name;
-        this.settings = settings;
-        this.checkResultsEnabled = checkResultsEnabled;
+        this.name = eventSchedulerContext.getTestContext().getTestRunId();
+        this.checkResultsEnabled = eventSchedulerContext.isSchedulerEnabled();
         this.broadcaster = broadcaster;
         this.scheduleEvents = scheduleEvents;
-        this.eventConfigs = eventConfigs;
+        this.eventSchedulerContext = eventSchedulerContext;
         this.eventMessageBus = messageBus;
         this.logger = logger;
         this.eventSchedulerEngine = eventSchedulerEngine;
         this.schedulerExceptionHandler = schedulerExceptionHandler;
 
-        this.waitForGoMessagesCount = (int) eventConfigs.stream()
-            .filter(EventConfig::isReadyForStartParticipant)
+        this.waitForGoMessagesCount = (int) eventSchedulerContext.getEventContexts().stream()
+            .filter(EventContext::isReadyForStartParticipant)
             .peek(e -> logger.info("Found 'ReadyForStart' participant: " + e.getName()))
             .count();
 
         this.startTest = () -> {
             broadcaster.broadcastStartTest();
-            eventSchedulerEngine.startKeepAliveThread(name, settings, broadcaster, schedulerExceptionHandler);
+            eventSchedulerEngine.startKeepAliveThread(name, eventSchedulerContext.getKeepAliveInterval(), broadcaster, schedulerExceptionHandler);
             eventSchedulerEngine.startCustomEventScheduler(scheduleEvents, broadcaster);
         };
 
@@ -209,6 +204,10 @@ public final class EventScheduler {
     @Override
     public String toString() {
         return "EventScheduler [testRunId:" + name + "]";
+    }
+
+    public EventSchedulerContext getEventSchedulerContext() {
+        return eventSchedulerContext;
     }
 
     private interface StartTest {

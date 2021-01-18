@@ -19,23 +19,23 @@ import nl.stokpop.eventscheduler.api.CustomEvent;
 import nl.stokpop.eventscheduler.api.EventAdapter;
 import nl.stokpop.eventscheduler.api.EventCheck;
 import nl.stokpop.eventscheduler.api.EventLogger;
-import nl.stokpop.eventscheduler.api.config.EventConfig;
+import nl.stokpop.eventscheduler.api.config.EventContext;
 import nl.stokpop.eventscheduler.api.message.EventMessageBus;
 
-public class EventDefault extends EventAdapter<EventConfig> {
+public class EventDefault extends EventAdapter<EventContext> {
 
-    EventDefault(EventConfig config, EventMessageBus messageBus, EventLogger logger) {
-        super(config, messageBus, logger);
+    EventDefault(EventContext context, EventMessageBus messageBus, EventLogger logger) {
+        super(context, messageBus, logger);
     }
 
     @Override
     public void beforeTest() {
-        logger.info("Before test: " + eventConfig.getTestConfig().getTestRunId());
+        logger.info("Before test: " + eventContext.getTestContext().getTestRunId());
     }
 
     @Override
     public void startTest() {
-        logger.info("Start test: " + eventConfig.getTestConfig().getTestRunId());
+        logger.info("Start test: " + eventContext.getTestContext().getTestRunId());
     }
 
     @Override

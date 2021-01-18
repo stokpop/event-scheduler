@@ -17,18 +17,8 @@ package nl.stokpop.eventscheduler;
 
 import net.jcip.annotations.NotThreadSafe;
 import nl.stokpop.eventscheduler.api.EventLogger;
-import nl.stokpop.eventscheduler.api.EventSchedulerSettings;
-import nl.stokpop.eventscheduler.api.EventSchedulerSettingsBuilder;
-import nl.stokpop.eventscheduler.api.config.EventConfig;
 import nl.stokpop.eventscheduler.api.config.EventSchedulerConfig;
-import nl.stokpop.eventscheduler.api.config.TestConfig;
-import nl.stokpop.eventscheduler.exception.EventSchedulerRuntimeException;
-
-import java.time.Duration;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Objects;
-import java.util.stream.Collectors;
+import nl.stokpop.eventscheduler.api.config.EventSchedulerContext;
 
 /**
  * Builder: intended to be used in one thread for construction and then to be discarded.
@@ -49,97 +39,19 @@ public class EventSchedulerBuilder {
      */
     public static EventScheduler of(EventSchedulerConfig eventSchedulerConfig, EventLogger logger, ClassLoader classLoader) {
 
-        final TestConfig topLevelConfig = determineTopLevelConfigAndInjectInEventConfigs(eventSchedulerConfig, logger);
-
-        String totalScheduleScript = collectScheduleScriptsInTopLevelConfig(eventSchedulerConfig);
-        eventSchedulerConfig.setScheduleScript(totalScheduleScript);
-
-        EventSchedulerSettings settings = new EventSchedulerSettingsBuilder()
-            .setKeepAliveInterval(Duration.ofSeconds(eventSchedulerConfig.getKeepAliveIntervalInSeconds()))
-            .build();
+        final EventSchedulerContext schedulerContext = eventSchedulerConfig.toContext(logger);
 
         EventSchedulerBuilderInternal eventSchedulerBuilder = new EventSchedulerBuilderInternal()
-            .setName(topLevelConfig.getTestRunId())
-            .setEventSchedulerSettings(settings)
-            .setAssertResultsEnabled(eventSchedulerConfig.isSchedulerEnabled())
+            .setEventSchedulerContext(schedulerContext)
             .setCustomEvents(eventSchedulerConfig.getScheduleScript())
             .setLogger(logger);
 
-        if (eventSchedulerConfig.getEventConfigs() != null) {
-            eventSchedulerConfig.getEventConfigs().forEach(eventSchedulerBuilder::addEvent);
-        }
+//        List<EventContext> eventContexts = schedulerContext.getEventContexts();
+//        if (eventContexts != null) {
+//            eventContexts.forEach(eventSchedulerBuilder::addEvent);
+//        }
 
         return eventSchedulerBuilder.build(classLoader);
     }
 
-    private static String collectScheduleScriptsInTopLevelConfig(EventSchedulerConfig eventSchedulerConfig) {
-        String topLevelScheduleScript = eventSchedulerConfig.getScheduleScript();
-
-        String subScheduleScripts = eventSchedulerConfig.getEventConfigs().stream()
-            .map(EventConfig::getScheduleScript)
-            .filter(Objects::nonNull)
-            .collect(Collectors.joining("\n"));
-
-        if (topLevelScheduleScript == null) {
-            return removeEmptyLines(subScheduleScripts);
-        }
-        else {
-            return removeEmptyLines(String.join("\n", topLevelScheduleScript, subScheduleScripts));
-        }
-
-    }
-
-    private static String removeEmptyLines(String text) {
-        return Arrays.stream(text.split("\\n"))
-            .map(String::trim)
-            .filter(line -> !line.isEmpty())
-            .collect(Collectors.joining("\n"));
-    }
-
-    private static TestConfig determineTopLevelConfigAndInjectInEventConfigs(EventSchedulerConfig eventSchedulerConfig, EventLogger logger) {
-
-        final TestConfig topLevelConfig;
-        // find first event config with a test config to use as top level config
-        if (eventSchedulerConfig.getTestConfig() == null) {
-            logger.info("no top level TestConfig found, will look for TestConfig in EventConfigs");
-
-            List<EventConfig> eventConfigsWithTestConfig = eventSchedulerConfig.getEventConfigs().stream()
-                .filter(eventConfig -> eventConfig.getTestConfig() != null)
-                .collect(Collectors.toList());
-
-            if (eventConfigsWithTestConfig.isEmpty()) {
-                throw new EventSchedulerRuntimeException("no EventConfig found with a TestConfig, add one TestConfig");
-            }
-
-            if (eventConfigsWithTestConfig.size() > 1) {
-                throw new EventSchedulerRuntimeException("multiple EventConfigs found with a TestConfig, only one TestConfig is allowed without using a top level TestConfig");
-            }
-
-            EventConfig eventConfig = eventConfigsWithTestConfig.get(0);
-            logger.info("using TestConfig of EventConfig '" + eventConfig.getName() + "' as top level TestConfig");
-
-            topLevelConfig = eventConfig.getTestConfig();
-            eventSchedulerConfig.setTestConfig(topLevelConfig);
-        }
-        else {
-            topLevelConfig = eventSchedulerConfig.getTestConfig();
-            // if there is a top level test config, do not allow test config in event configs
-            List<EventConfig> eventConfigsWithTestConfig = eventSchedulerConfig.getEventConfigs().stream()
-                .filter(eventConfig -> eventConfig.getTestConfig() != null)
-                .collect(Collectors.toList());
-
-            if (eventConfigsWithTestConfig.size() > 0) {
-                String eventConfigs = eventConfigsWithTestConfig.stream()
-                    .map(EventConfig::getName)
-                    .collect(Collectors.joining(","));
-                throw new EventSchedulerRuntimeException("when a top level TestConfig is used, do not use TestConfig in EventConfigs: " + eventConfigs);
-            }
-        }
-
-        // inject top level config in all event configs
-        eventSchedulerConfig.getEventConfigs()
-            .forEach(eventConfig -> eventConfig.setTestConfig(topLevelConfig));
-
-        return topLevelConfig;
-    }
 }

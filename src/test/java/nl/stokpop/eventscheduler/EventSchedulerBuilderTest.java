@@ -15,11 +15,11 @@
  */
 package nl.stokpop.eventscheduler;
 
-import nl.stokpop.eventscheduler.api.EventSchedulerSettings;
-import nl.stokpop.eventscheduler.api.EventSchedulerSettingsBuilder;
 import nl.stokpop.eventscheduler.api.config.EventConfig;
+import nl.stokpop.eventscheduler.api.config.EventSchedulerConfig;
 import nl.stokpop.eventscheduler.api.config.TestConfig;
 import nl.stokpop.eventscheduler.exception.EventSchedulerRuntimeException;
+import nl.stokpop.eventscheduler.log.EventLoggerStdOut;
 import org.junit.Test;
 
 import java.net.URL;
@@ -32,10 +32,13 @@ public class EventSchedulerBuilderTest {
          String alternativeClassCustomEvents = "  @generatorFactoryClass=nl.stokpop.eventscheduler.generator.EventGeneratorFactoryDefault\n" +
                  "  my-setting=my-value \n";
 
-         EventSchedulerBuilderInternal eventSchedulerBuilder = new EventSchedulerBuilderInternal()
-             .setName("test-run-1")
+        EventSchedulerConfig build = EventSchedulerConfig.builder()
+            .testConfig(TestConfig.builder().build())
+            .build();
+
+        EventSchedulerBuilderInternal eventSchedulerBuilder = new EventSchedulerBuilderInternal()
              .setCustomEvents(alternativeClassCustomEvents)
-             .setEventSchedulerSettings(new EventSchedulerSettingsBuilder().build());
+             .setEventSchedulerContext(build.toContext(EventLoggerStdOut.INSTANCE));
 
         ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
         EventScheduler eventScheduler =
@@ -66,34 +69,30 @@ public class EventSchedulerBuilderTest {
      */
     @Test
     public void testFactoriesAndBroadcaster() {
-        EventSchedulerBuilderInternal builder = new EventSchedulerBuilderInternal();
-
-        EventSchedulerSettingsBuilder eventSchedulerSettingsBuilder = new EventSchedulerSettingsBuilder();
-        EventSchedulerSettings eventSchedulerSettings = eventSchedulerSettingsBuilder.build();
-
-        builder.setName("test-run-1");
-        builder.setEventSchedulerSettings(eventSchedulerSettings);
 
         String factoryClassName = "nl.stokpop.eventscheduler.event.EventFactoryDefault";
 
         TestConfig testConfig = TestConfig.builder().build();
 
-        EventConfig eventConfig = new EventConfig();
-        eventConfig.setName("Event1");
-        eventConfig.setEventFactory(factoryClassName);
-        eventConfig.setEnabled(true);
-        eventConfig.setTestConfig(testConfig);
+        EventConfig eventConfig1 = EventConfig.builder()
+            .name("Event1")
+            .eventFactory(factoryClassName)
+            .enabled(true)
+            .testConfig(testConfig)
+            .build();
 
-        builder.addEvent(eventConfig);
+        EventConfig eventConfig2 = EventConfig.builder()
+            .name("Event2")
+            .eventFactory(factoryClassName)
+            .enabled(true)
+            .build();
 
-        EventConfig eventConfig2 = new EventConfig();
-        eventConfig2.setName("Event2");
-        eventConfig2.setEventFactory(factoryClassName);
-        eventConfig2.setEnabled(true);
-        eventConfig2.setTestConfig(testConfig);
-
-        builder.addEvent(eventConfig2);
-
+        EventSchedulerBuilderInternal builder = new EventSchedulerBuilderInternal();
+        EventSchedulerConfig config = EventSchedulerConfig.builder()
+            .eventConfig(eventConfig1)
+            .eventConfig(eventConfig2)
+            .build();
+        builder.setEventSchedulerContext(config.toContext(EventLoggerStdOut.INSTANCE));
         EventScheduler eventScheduler = builder.build();
 
         eventScheduler.startSession();
@@ -101,9 +100,13 @@ public class EventSchedulerBuilderTest {
 
     @Test(expected = EventSchedulerRuntimeException.class)
     public void testUniqueEventNameCheck() {
+        EventSchedulerConfig config = EventSchedulerConfig.builder()
+            .eventConfig(EventConfig.builder().name("one").build())
+            .eventConfig(EventConfig.builder().name("one").build())
+            .build();
+
         EventSchedulerBuilderInternal builder = new EventSchedulerBuilderInternal();
-        builder.addEvent(EventConfig.builder().name("one").build());
-        builder.addEvent(EventConfig.builder().name("one").build());
+        builder.setEventSchedulerContext(config.toContext(EventLoggerStdOut.INSTANCE));
     }
 
 }

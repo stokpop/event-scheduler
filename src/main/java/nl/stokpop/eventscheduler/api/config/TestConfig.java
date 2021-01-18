@@ -17,18 +17,18 @@ package nl.stokpop.eventscheduler.api.config;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
-import java.util.Arrays;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 
-@Data
+@Setter
 @Builder
-@NoArgsConstructor
 @AllArgsConstructor
+@NoArgsConstructor
+//@NotThreadSafe
 public class TestConfig {
     @Builder.Default
     private String systemUnderTest = "UNKNOWN_SYSTEM_UNDER_TEST";
@@ -55,18 +55,20 @@ public class TestConfig {
     @Builder.Default
     private Integer constantLoadTimeInSeconds = 570;
 
-    public void setTags(String commaSeparatedTags) {
-        if (commaSeparatedTags == null) {
-            this.tags = Collections.emptyList();
-        }
-        else if (commaSeparatedTags.contains(",")) {
-            this.tags = Arrays.stream(commaSeparatedTags.split(","))
-                .map(String::trim)
-                .filter(s -> !s.isEmpty())
-                .collect(Collectors.toList());
-        }
-        else {
-            tags = Collections.singletonList(commaSeparatedTags);
-        }
+    public TestContext toContext() {
+        return TestContext.builder()
+            .systemUnderTest(systemUnderTest)
+            .workload(workload)
+            .testEnvironment(testEnvironment)
+            .productName(productName)
+            .dashboardName(dashboardName)
+            .testRunId(testRunId)
+            .buildResultsUrl(buildResultsUrl)
+            .version(version)
+            .annotations(annotations)
+            .tags(tags)
+            .rampupTime(Duration.ofSeconds(rampupTimeInSeconds))
+            .constantLoadTime(Duration.ofSeconds(constantLoadTimeInSeconds))
+            .build();
     }
 }

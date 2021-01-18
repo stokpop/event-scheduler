@@ -17,7 +17,8 @@ package nl.stokpop.eventscheduler;
 
 import net.jcip.annotations.NotThreadSafe;
 import nl.stokpop.eventscheduler.api.*;
-import nl.stokpop.eventscheduler.api.config.EventConfig;
+import nl.stokpop.eventscheduler.api.config.EventContext;
+import nl.stokpop.eventscheduler.api.config.EventSchedulerContext;
 import nl.stokpop.eventscheduler.api.message.EventMessageBus;
 import nl.stokpop.eventscheduler.event.EventFactoryProvider;
 import nl.stokpop.eventscheduler.exception.EventSchedulerRuntimeException;
@@ -39,13 +40,9 @@ import java.util.stream.Collectors;
 @NotThreadSafe
 class EventSchedulerBuilderInternal {
 
-    private final Map<String, EventConfig> eventConfigs = new ConcurrentHashMap<>();
+    private final Map<String, EventContext> eventContexts = new ConcurrentHashMap<>();
 
-    private String name;
-
-    private EventSchedulerSettings eventSchedulerSettings;
-
-    private boolean assertResultsEnabled = false;
+    private EventSchedulerContext eventSchedulerContext;
 
     private String customEventsText = "";
 
@@ -75,23 +72,14 @@ class EventSchedulerBuilderInternal {
         this.schedulerExceptionHandler = callback;
         return this;
     }
-    public EventSchedulerBuilderInternal setName(String name) {
-        this.name = name;
-        return this;
-    }
 
     public EventSchedulerBuilderInternal setLogger(EventLogger logger) {
         this.logger = logger;
         return this;
     }
 
-    public EventSchedulerBuilderInternal setEventSchedulerSettings(EventSchedulerSettings settings) {
-        this.eventSchedulerSettings = settings;
-        return this;
-    }
-
-    public EventSchedulerBuilderInternal setAssertResultsEnabled(boolean assertResultsEnabled) {
-        this.assertResultsEnabled = assertResultsEnabled;
+    public EventSchedulerBuilderInternal setEventSchedulerContext(EventSchedulerContext context) {
+        this.eventSchedulerContext = context;
         return this;
     }
 
@@ -112,13 +100,15 @@ class EventSchedulerBuilderInternal {
      */
     public EventScheduler build(ClassLoader classLoader) {
 
-        if (name == null) {
-            throw new EventSchedulerRuntimeException("Name must be set, it is null.");
+        if (eventSchedulerContext == null) {
+            throw new EventSchedulerRuntimeException("eventSchedulerContext must be set, it is null.");
         }
 
-        EventSchedulerSettings myEventSchedulerSettings = (eventSchedulerSettings == null)
-                ? new EventSchedulerSettingsBuilder().build()
-                : eventSchedulerSettings;
+        EventMessageBus eventMessageBus = (this.eventMessageBus == null)
+            ? new EventMessageBusSimple()
+            : this.eventMessageBus;
+
+        eventSchedulerContext.getEventContexts().forEach(this::addEvent);
 
         List<CustomEvent> customEvents =
                 generateCustomEventSchedule(customEventsText, logger, classLoader);
@@ -127,13 +117,13 @@ class EventSchedulerBuilderInternal {
                 ? EventFactoryProvider.createInstanceFromClasspath(classLoader)
                 : eventFactoryProvider;
 
-        eventConfigs.values().stream()
+        eventContexts.values().stream()
                 .filter(eventConfig -> !eventConfig.isEnabled())
                 .forEach(eventConfig -> logger.info("Event disabled: " + eventConfig.getName()));
 
-        List<Event> events = eventConfigs.values().stream()
-                .filter(EventConfig::isEnabled)
-                .map(eventConfig -> createEvent(provider, eventConfig, eventMessageBus))
+        List<Event> events = eventContexts.values().stream()
+                .filter(EventContext::isEnabled)
+                .map(context -> createEvent(provider, context, eventMessageBus))
                 .collect(Collectors.toList());
 
         EventBroadcasterFactory broadcasterFactory = (eventBroadcasterFactory == null)
@@ -146,17 +136,10 @@ class EventSchedulerBuilderInternal {
             ? new EventSchedulerEngine(logger)
             : eventSchedulerEngine;
 
-        EventMessageBus eventMessageBus = (this.eventMessageBus == null)
-            ? new EventMessageBusImpl()
-            : this.eventMessageBus;
-
         return new EventScheduler(
-            name,
-            myEventSchedulerSettings,
-            assertResultsEnabled,
             broadcaster,
             customEvents,
-            eventConfigs.values(),
+            eventSchedulerContext,
             eventMessageBus,
             logger,
             eventSchedulerEngine,
@@ -164,15 +147,15 @@ class EventSchedulerBuilderInternal {
     }
 
     @SuppressWarnings("unchecked")
-    private Event createEvent(EventFactoryProvider provider, EventConfig eventConfig, EventMessageBus eventMessageBus) {
-        String factoryClassName = eventConfig.getEventFactory();
-        String eventName = eventConfig.getName();
+    private Event createEvent(EventFactoryProvider provider, EventContext context, EventMessageBus messageBus) {
+        String factoryClassName = context.getEventFactory();
+        String eventName = context.getName();
         EventLogger eventLogger = new EventLoggerWithName(eventName, removeFactoryPostfix(factoryClassName), logger);
 
         // create has raw type usage, so we have @SuppressWarnings("unchecked")
         return provider.factoryByClassName(factoryClassName)
                 .orElseThrow(() -> new RuntimeException(factoryClassName + " not found on classpath"))
-                .create(eventConfig, eventMessageBus, eventLogger);
+                .create(context, messageBus, eventLogger);
     }
 
     private String removeFactoryPostfix(String factoryClassName) {
@@ -251,14 +234,14 @@ class EventSchedulerBuilderInternal {
 
     /**
      * Event name should be unique: it is used in logging and as lookup key.
-     * @param eventConfig the config to add, the eventConfig must contain an testConfig
+     * @param eventContext the config to add, the eventConfig must contain an testConfig
      * @return this
      */
-    public EventSchedulerBuilderInternal addEvent(EventConfig eventConfig) {
-        if (eventConfig.getTestConfig() == null) { throw new EventSchedulerRuntimeException("eventConfig without test config! " + eventConfig); }
-        EventConfig existingEventConfig = eventConfigs.putIfAbsent(eventConfig.getName(), eventConfig);
-        if (existingEventConfig != null) {
-            throw new EventSchedulerRuntimeException("Event name is not unique: " + eventConfig.getName());
+    private EventSchedulerBuilderInternal addEvent(EventContext eventContext) {
+        if (eventContext.getTestContext() == null) { throw new EventSchedulerRuntimeException("eventConfig without test config! " + eventContext); }
+        EventContext existingEventContext = eventContexts.putIfAbsent(eventContext.getName(), eventContext);
+        if (existingEventContext != null) {
+            throw new EventSchedulerRuntimeException("Event name is not unique: " + eventContext.getName());
         }
         return this;
     }

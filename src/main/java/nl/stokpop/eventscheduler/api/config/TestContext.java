@@ -13,14 +13,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nl.stokpop.eventscheduler.api;
+package nl.stokpop.eventscheduler.api.config;
 
-public interface EventLogger {
-    void info(String message);
-    void warn(String message);
-    void error(String message);
-    void error(String message, Throwable throwable);
-    void debug(String message);
-    boolean isDebugEnabled();
+import lombok.AccessLevel;
+import lombok.Builder;
+import lombok.Singular;
+import lombok.Value;
 
+import java.time.Duration;
+import java.util.List;
+
+@Value
+@Builder(access = AccessLevel.PROTECTED)
+//@Immutable
+public class TestContext {
+    String systemUnderTest;
+    String workload;
+    String testEnvironment;
+    String productName;
+    String dashboardName;
+    String testRunId;
+    String buildResultsUrl;
+    String version;
+    String annotations;
+    @Singular
+    List<String> tags;
+    Duration rampupTime;
+    Duration constantLoadTime;
 }
