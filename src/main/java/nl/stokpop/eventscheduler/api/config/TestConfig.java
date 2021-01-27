@@ -19,6 +19,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import net.jcip.annotations.NotThreadSafe;
 
 import java.time.Duration;
 import java.util.Collections;
@@ -28,7 +29,7 @@ import java.util.List;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-//@NotThreadSafe
+@NotThreadSafe
 public class TestConfig {
     @Builder.Default
     private String systemUnderTest = "UNKNOWN_SYSTEM_UNDER_TEST";

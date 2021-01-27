@@ -19,13 +19,14 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Singular;
 import lombok.Value;
+import net.jcip.annotations.Immutable;
 
 import java.time.Duration;
 import java.util.List;
 
 @Value
 @Builder(access = AccessLevel.PROTECTED)
-//@Immutable
+@Immutable
 public class TestContext {
     String systemUnderTest;
     String workload;

@@ -20,6 +20,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Value;
 import lombok.experimental.NonFinal;
+import net.jcip.annotations.Immutable;
 
 /**
  * The EventConfig is used is given to each event call.
@@ -31,7 +32,7 @@ import lombok.experimental.NonFinal;
  * If set to false, the event will not be active.
  */
 
-//@Immutable
+@Immutable
 @Value
 @AllArgsConstructor
 @Builder(access = AccessLevel.PROTECTED)

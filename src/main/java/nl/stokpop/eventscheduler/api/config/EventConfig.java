@@ -19,6 +19,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import net.jcip.annotations.NotThreadSafe;
 
 /**
  * The EventConfig is used is given to each event call.
@@ -33,7 +34,7 @@ import lombok.Setter;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-//@NotThreadSafe
+@NotThreadSafe
 public class EventConfig {
     @Builder.Default
     private String name = "anonymous-" + System.currentTimeMillis();
