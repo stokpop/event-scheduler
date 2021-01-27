@@ -21,7 +21,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'com.github.stephenc.jcip:jcip-annotations:1.0-1'
+    compile 'com.github.stephenc.jcip:jcip-annotations:1.0-1'
     compileOnly 'org.projectlombok:lombok:1.18.16'
     annotationProcessor 'org.projectlombok:lombok:1.18.16'
 
@@ -32,7 +32,7 @@ dependencies {
 }
 
 group = 'nl.stokpop'
-version = '3.0.0'
+version = '3.0.1'
 description = 'event-scheduler'
 sourceCompatibility = '1.8'
 
