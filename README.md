@@ -253,7 +253,10 @@ Two convenience logger implementations are provided for the `nl.stokpop.eventsch
 
 The keep-alive call can receive data from remote systems and decide to throw a `KillSwitchException` based
 on that data. If a `KillSwitchException` is thrown and passed on to the user of the event-scheduler, running
-tests can be aborted based on the received data. 
+tests can for instance be aborted based on the received data.
+
+A `SchedulerExceptionHandler` implementation can be set on the `EventScheduler`. It contains a `kill` and `abort`
+method that you can implement to handle these exceptions.
 
 An example is that the analysis tool in use discovers too high response times and decides to kill the
 running test.

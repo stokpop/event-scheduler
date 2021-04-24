@@ -42,8 +42,6 @@ public final class EventScheduler {
 
     private final EventSchedulerContext eventSchedulerContext;
 
-    private final EventMessageBus eventMessageBus;
-
     private volatile SchedulerExceptionHandler schedulerExceptionHandler;
 
     private final EventSchedulerEngine eventSchedulerEngine;
@@ -53,6 +51,7 @@ public final class EventScheduler {
     private final AtomicInteger goMessageCount = new AtomicInteger(0);
 
     private final StartTest startTest;
+
     private final int waitForGoMessagesCount;
 
     EventScheduler(EventBroadcaster broadcaster,
@@ -67,7 +66,6 @@ public final class EventScheduler {
         this.broadcaster = broadcaster;
         this.scheduleEvents = scheduleEvents;
         this.eventSchedulerContext = eventSchedulerContext;
-        this.eventMessageBus = messageBus;
         this.logger = logger;
         this.eventSchedulerEngine = eventSchedulerEngine;
         this.schedulerExceptionHandler = schedulerExceptionHandler;
@@ -77,17 +75,24 @@ public final class EventScheduler {
             .peek(e -> logger.info("Found 'ReadyForStart' participant: " + e.getName()))
             .count();
 
-        this.startTest = () -> {
-            broadcaster.broadcastStartTest();
-            eventSchedulerEngine.startKeepAliveThread(name, eventSchedulerContext.getKeepAliveInterval(), broadcaster, schedulerExceptionHandler);
-            eventSchedulerEngine.startCustomEventScheduler(scheduleEvents, broadcaster);
-        };
+        this.startTest = createStartTest();
 
         // add startTest to this receiver... if needed...
         if (waitForGoMessagesCount != 0) {
             logger.info("Wait for Go! messages is active, need " + waitForGoMessagesCount + " Go! messages to start!");
-            this.eventMessageBus.addReceiver(m -> checkMessageForGo(m, startTest, waitForGoMessagesCount));
+            messageBus.addReceiver(m -> checkMessageForGo(m, startTest, waitForGoMessagesCount));
         }
+    }
+
+    private StartTest createStartTest() {
+        return () -> {
+            broadcaster.broadcastStartTest();
+            // Note that schedulerExceptionHandler field can be set later, so it's value can change over time!
+            // The schedulerExceptionHandler can be null in constructor.
+            // Can result in: "SchedulerHandlerException KILL was thrown, but no SchedulerExceptionHandler is present."
+            eventSchedulerEngine.startKeepAliveThread(name, eventSchedulerContext.getKeepAliveInterval(), broadcaster, schedulerExceptionHandler);
+            eventSchedulerEngine.startCustomEventScheduler(scheduleEvents, broadcaster);
+        };
     }
 
     private void checkMessageForGo(EventMessage m, StartTest startTest, int totalGoMessages) {

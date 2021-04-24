@@ -21,6 +21,7 @@ import nl.stokpop.eventscheduler.api.message.EventMessage;
 import nl.stokpop.eventscheduler.api.message.EventMessageBus;
 import nl.stokpop.eventscheduler.event.EventFactoryProvider;
 import nl.stokpop.eventscheduler.exception.EventCheckFailureException;
+import nl.stokpop.eventscheduler.exception.handler.KillSwitchException;
 import nl.stokpop.eventscheduler.log.EventLoggerStdOut;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -50,12 +51,17 @@ public class EventSchedulerTest
         @SuppressWarnings("unchecked")
         EventFactory<EventContext> eventFactory = Mockito.mock(EventFactory.class);
 
-        Mockito.when(eventFactory.create(any(), any(), any())).thenReturn(event);
-        Mockito.when(provider.factoryByClassName(any())).thenReturn(Optional.of(eventFactory));
+        Mockito.when(eventFactory.create(any(), any(), any()))
+            .thenReturn(event);
+        Mockito.when(provider.factoryByClassName(any()))
+            .thenReturn(Optional.of(eventFactory));
         EventCheck eventOne = new EventCheck("eventOne", "nl.stokpop.MockEvent", EventStatus.FAILURE, "This event failed!");
         EventCheck eventTwo = new EventCheck("eventTwo", "nl.stokpop.MockEvent", EventStatus.SUCCESS, "This event was ok!");
         EventCheck eventThree = new EventCheck("eventThree", "nl.stokpop.MockEvent", EventStatus.FAILURE, "This event failed also!");
-        Mockito.when(event.check()).thenReturn(eventOne).thenReturn(eventTwo).thenReturn(eventThree);
+        Mockito.when(event.check())
+            .thenReturn(eventOne)
+            .thenReturn(eventTwo)
+            .thenReturn(eventThree);
 
         String eventSchedule =
                 "   \n" +
@@ -170,8 +176,11 @@ public class EventSchedulerTest
         EventWithMessageBus event1 = new EventWithMessageBus(eventConfig1.toContext(), testLogger, eventMessageBus);
         EventWithMessageBus event2 = new EventWithMessageBus(eventConfig2.toContext(), testLogger, eventMessageBus);
 
-        Mockito.when(eventFactory.create(any(), any(), any())).thenReturn(event1).thenReturn(event2);
-        Mockito.when(provider.factoryByClassName(any())).thenReturn(Optional.of(eventFactory));
+        Mockito.when(eventFactory.create(any(), any(), any()))
+            .thenReturn(event1)
+            .thenReturn(event2);
+        Mockito.when(provider.factoryByClassName(any()))
+            .thenReturn(Optional.of(eventFactory));
 
         EventSchedulerConfig eventSchedulerConfig = EventSchedulerConfig.builder()
             .keepAliveIntervalInSeconds(1)
@@ -218,8 +227,11 @@ public class EventSchedulerTest
         EventWithMessageBus event1 = new EventWithMessageBus(eventConfig1.toContext(), testLogger, eventMessageBus);
         EventWithMessageBus event2 = new EventWithMessageBus(eventConfig2.toContext(), testLogger, eventMessageBus);
 
-        Mockito.when(eventFactory.create(any(), any(), any())).thenReturn(event1).thenReturn(event2);
-        Mockito.when(provider.factoryByClassName(any())).thenReturn(Optional.of(eventFactory));
+        Mockito.when(eventFactory.create(any(), any(), any()))
+            .thenReturn(event1)
+            .thenReturn(event2);
+        Mockito.when(provider.factoryByClassName(any()))
+            .thenReturn(Optional.of(eventFactory));
 
         EventSchedulerConfig config = EventSchedulerConfig.builder()
             .keepAliveIntervalInSeconds(1)
@@ -360,6 +372,93 @@ public class EventSchedulerTest
 
         // should be called once in stop, not also in abort
         Mockito.verify(eventSchedulerEngine, times(1)).shutdownThreadsNow();
+
+    }
+
+    private static class CheckCallbacks {
+        public volatile boolean killCalled = false;
+        public volatile boolean abortCalled = false;
+    }
+
+    static class KillSwitchExceptionEvent extends EventAdapter<EventContext> {
+
+        public KillSwitchExceptionEvent(EventContext eventContext, EventLogger logger, EventMessageBus eventMessageBus) {
+            super(eventContext, eventMessageBus, logger);
+        }
+
+        @Override
+        public void keepAlive() {
+            logger.error("About to throw KillSwitchException!");
+            throw new KillSwitchException("Please stop now!");
+        }
+    }
+
+    @Test
+    public void testKillSwitch() throws InterruptedException {
+
+        EventLogger testLogger = EventLoggerStdOut.INSTANCE_DEBUG;
+
+        EventFactoryProvider provider = Mockito.mock(EventFactoryProvider.class);
+
+        @SuppressWarnings("unchecked")
+        EventFactory<EventContext> eventFactory = Mockito.mock(EventFactory.class);
+
+        TestConfig testConfig = TestConfig.builder().build();
+
+        EventConfig eventConfig1 = EventConfig.builder()
+            .name("myEvent1")
+            .isReadyForStartParticipant(false)
+            .testConfig(testConfig)
+            .build();
+
+        EventMessageBusSimple eventMessageBus = new EventMessageBusSimple();
+        KillSwitchExceptionEvent event1 = new KillSwitchExceptionEvent(eventConfig1.toContext(), testLogger, eventMessageBus);
+
+        Mockito.when(eventFactory.create(any(), any(), any()))
+            .thenReturn(event1);
+        Mockito.when(provider.factoryByClassName(any()))
+            .thenReturn(Optional.of(eventFactory));
+
+        EventSchedulerConfig config = EventSchedulerConfig.builder()
+            .keepAliveIntervalInSeconds(1)
+            .eventConfig(eventConfig1)
+            .build();
+
+        final CheckCallbacks checkCallbacks = new CheckCallbacks();
+
+        SchedulerExceptionHandler schedulerExceptionHandler = new SchedulerExceptionHandler() {
+            @Override
+            public void kill(String message) {
+                checkCallbacks.killCalled = true;
+            }
+
+            @Override
+            public void abort(String message) {
+                checkCallbacks.abortCalled = true;
+            }
+        };
+
+        // This unit test would fail when calling the "addKillSwitch" instead
+        // of the setSchedulerExceptionHandler on the Builder...
+        // reason: the startTest lambda captured the 'null' EventScheduler in constructor,
+        // instead of the field that is set via addKillSwitch method.
+        EventScheduler scheduler = new EventSchedulerBuilderInternal()
+            .setEventSchedulerContext(config.toContext(EventLoggerStdOut.INSTANCE))
+            //.setSchedulerExceptionHandler(schedulerExceptionHandler)
+            .setEventMessageBus(eventMessageBus)
+            .setLogger(testLogger)
+            .setEventFactoryProvider(provider)
+            .build();
+
+        scheduler.addKillSwitch(schedulerExceptionHandler);
+
+        scheduler.startSession();
+
+        // expect KillSwitchException from keep-alive call, and callback
+        Thread.sleep(10);
+
+        assertFalse(checkCallbacks.abortCalled);
+        assertTrue(checkCallbacks.killCalled);
 
     }
 }
