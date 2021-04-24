@@ -9,9 +9,9 @@ plugins {
     id 'maven-publish'
     id 'signing'
     // check dependency updates: ./gradlew dependencyUpdates -Drevision=release
-    id 'com.github.ben-manes.versions' version '0.36.0'
+    id 'com.github.ben-manes.versions' version '0.38.0'
     id 'com.github.hierynomus.license' version '0.15.0'
-    id 'io.codearte.nexus-staging' version '0.22.0'
+    id 'io.codearte.nexus-staging' version '0.30.0'
 }
 
 repositories {
@@ -22,13 +22,11 @@ repositories {
 
 dependencies {
     compile 'com.github.stephenc.jcip:jcip-annotations:1.0-1'
-    compileOnly 'org.projectlombok:lombok:1.18.16'
-    annotationProcessor 'org.projectlombok:lombok:1.18.16'
+    compileOnly 'org.projectlombok:lombok:1.18.20'
+    annotationProcessor 'org.projectlombok:lombok:1.18.20'
 
-    testCompileOnly 'org.projectlombok:lombok:1.18.16'
-    testAnnotationProcessor 'org.projectlombok:lombok:1.18.16'
-    testImplementation 'junit:junit:4.13.1'
-    testImplementation 'org.mockito:mockito-core:3.7.7'
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.mockito:mockito-core:3.9.0'
 }
 
 group = 'nl.stokpop'
@@ -167,7 +165,6 @@ if (project.hasProperty('release')) {
                 }
             }
         }
-
     }
 }
 
