@@ -1,0 +1,26 @@
+version: 2
+updates:
+- package-ecosystem: gradle
+  directory: "/"
+  schedule:
+    interval: daily
+    time: "04:00"
+  open-pull-requests-limit: 10
+  ignore:
+  - dependency-name: org.mockito:mockito-core
+    versions:
+    - 3.8.0
+    - 3.9.0
+  - dependency-name: org.projectlombok:lombok
+    versions:
+    - 1.18.18
+    - 1.18.20
+  - dependency-name: com.github.ben-manes.versions
+    versions:
+    - 0.38.0
+  - dependency-name: io.codearte.nexus-staging
+    versions:
+    - 0.30.0
+  - dependency-name: junit:junit
+    versions:
+    - 4.13.2
