@@ -10,7 +10,7 @@ plugins {
     id 'signing'
     // check dependency updates: ./gradlew dependencyUpdates -Drevision=release
     id 'com.github.ben-manes.versions' version '0.38.0'
-    id 'com.github.hierynomus.license' version '0.15.0'
+    id 'com.github.hierynomus.license' version '0.16.1'
     id 'io.codearte.nexus-staging' version '0.30.0'
 }
 
